@@ -26,6 +26,12 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     return_types.emplace_back(LogicalType::LIST(LogicalType::UINTEGER));
     names.emplace_back("promo_text");
     return_types.emplace_back(LogicalType::LIST(LogicalType::VARCHAR));
+    names.emplace_back("shelf");
+    return_types.emplace_back(LogicalType::LIST(LogicalType::VARCHAR));
+    names.emplace_back("position");
+    return_types.emplace_back(LogicalType::LIST(LogicalType::UINTEGER));
+    names.emplace_back("is_paid");
+    return_types.emplace_back(LogicalType::LIST(LogicalType::BOOLEAN));
 
     return make_uniq<Bigtable2FunctionData>();
 }
