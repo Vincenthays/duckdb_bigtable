@@ -12,8 +12,8 @@
 namespace duckdb {
 
 static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types, vector<string> &names) {
-    return_types.emplace_back(LogicalType::INTEGER);
-    names.emplace_back("col1");
+    return_types.emplace_back(LogicalType::UINTEGER);
+    names.emplace_back("pe_id");
     return make_uniq<TableFunctionData>();
 }
 
