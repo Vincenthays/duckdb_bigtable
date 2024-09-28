@@ -20,12 +20,12 @@ struct Bigtable2FunctionData : TableFunctionData {
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
     auto &state = (Bigtable2FunctionData &)*data.bind_data;
 
-    if (state.row_idx >= 1) {
+    if (state.row_idx >= 100) {
         output.SetCardinality(0);
         return;
     }
 
-    output.SetValue(0, 0, Value::INTEGER(1));
+    output.SetValue(0, 0, Value::INTEGER(2));
     output.SetCardinality(1);
 
     state.row_idx++;
