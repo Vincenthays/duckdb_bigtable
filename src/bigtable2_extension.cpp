@@ -4,11 +4,20 @@
 #include "duckdb.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension_util.hpp"
+#include <google/cloud/bigtable/table.h>
+
+
+using google::cloud::bigtable::Table;
+using google::cloud::bigtable::CreateDefaultDataClient;
+using google::cloud::bigtable::ClientOptions;
+using google::cloud::bigtable::Filter;
+
 
 namespace duckdb {
 
 struct Bigtable2FunctionData : TableFunctionData {
     idx_t row_idx = 0;
+    shared_ptr<Table> table;
 };
 
 static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types, vector<string> &names) {
@@ -33,11 +42,18 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     names.emplace_back("is_paid");
     return_types.emplace_back(LogicalType::LIST(LogicalType::BOOLEAN));
 
-    return make_uniq<Bigtable2FunctionData>();
+    auto data_client = CreateDefaultDataClient("dataimpact-processing", "processing", ClientOptions());
+    auto table = make_shared_ptr<Table>(data_client, "product");
+
+    auto bind_data = make_uniq<Bigtable2FunctionData>();
+    bind_data->table = table;
+
+    return std::move(bind_data);
 }
 
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
     auto &state = (Bigtable2FunctionData &)*data.bind_data;
+    // state.table->ReadRow("row-key", filter);
 
     if (state.row_idx >= 100) {
         output.SetCardinality(0);
