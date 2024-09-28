@@ -1,0 +1,23 @@
+# name: test/sql/bigtable2.test
+# description: test bigtable2 extension
+# group: [bigtable2]
+
+# Before we load the extension, this will fail
+statement error
+SELECT bigtable2('Sam');
+----
+Catalog Error: Scalar Function with name bigtable2 does not exist!
+
+# Require statement will ensure this test is run with this extension loaded
+require bigtable2
+
+# Confirm the extension works
+query I
+SELECT bigtable2('Sam');
+----
+Bigtable2 Sam 🐥
+
+query I
+SELECT bigtable2_openssl_version('Michael') ILIKE 'Bigtable2 Michael, my linked OpenSSL version is OpenSSL%';
+----
+true
