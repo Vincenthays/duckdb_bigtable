@@ -18,8 +18,8 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
 }
 
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
-    output.SetCapacity(1);
-    output.SetValue(0, 0, Value(1));
+    output.SetValue(0, 0, Value::INTEGER(1));
+    output.SetCardinality(1);
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
