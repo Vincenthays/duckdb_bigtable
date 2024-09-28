@@ -16,19 +16,14 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     return_types.emplace_back(LogicalType::UBIGINT);
     names.emplace_back("shop_id");
     return_types.emplace_back(LogicalType::UINTEGER);
-
     names.emplace_back("price");
     return_types.emplace_back(LogicalType::FLOAT);
-
     names.emplace_back("base_price");
     return_types.emplace_back(LogicalType::FLOAT);
-
     names.emplace_back("unit_price");
     return_types.emplace_back(LogicalType::FLOAT);
-
     names.emplace_back("promo_id");
     return_types.emplace_back(LogicalType::LIST(LogicalType::UINTEGER));
-
     names.emplace_back("promo_text");
     return_types.emplace_back(LogicalType::LIST(LogicalType::VARCHAR));
 
