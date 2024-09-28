@@ -7,15 +7,15 @@
 
 namespace duckdb {
 
-static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types, vector<string> &names) {
-    return_types.emplace_back(LogicalType::UINTEGER);
-    names.emplace_back("pe_id");
-    return make_uniq<TableFunctionData>();
-}
-
 struct Bigtable2FunctionData : TableFunctionData {
     idx_t row_idx = 0;
 };
+
+static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types, vector<string> &names) {
+    return_types.emplace_back(LogicalType::UINTEGER);
+    names.emplace_back("pe_id");
+    return make_uniq<Bigtable2FunctionData>();
+}
 
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
     auto &state = (Bigtable2FunctionData &)*data.bind_data;
@@ -25,15 +25,13 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         return;
     }
 
-    output.SetValue(0, 0, Value::INTEGER(2));
+    output.SetValue(0, state.row_idx++, Value::INTEGER(2));
     output.SetCardinality(1);
-
-    state.row_idx++;
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
     TableFunction bigtable_function("bigtable2", {LogicalType::VARCHAR}, Bigtable2Function, Bigtable2FunctionBind);
-    ExtensionUtil::RegisterFunction(*db.instance, bigtable_function);    
+    ExtensionUtil::RegisterFunction(*db.instance, bigtable_function);
 }
 
 std::string Bigtable2Extension::Name() {
