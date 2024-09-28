@@ -2,12 +2,8 @@
 
 #include "bigtable2_extension.hpp"
 #include "duckdb.hpp"
-#include "duckdb/common/exception.hpp"
-#include "duckdb/common/string_util.hpp"
-#include "duckdb/function/scalar_function.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension_util.hpp"
-#include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 
 namespace duckdb {
 
@@ -17,9 +13,22 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     return make_uniq<TableFunctionData>();
 }
 
+struct Bigtable2FunctionData : TableFunctionData {
+    idx_t row_idx = 0;
+};
+
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
+    auto &state = (Bigtable2FunctionData &)*data.bind_data;
+
+    if (state.row_idx >= 1) {
+        output.SetCardinality(0);
+        return;
+    }
+
     output.SetValue(0, 0, Value::INTEGER(1));
     output.SetCardinality(1);
+
+    state.row_idx++;
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
