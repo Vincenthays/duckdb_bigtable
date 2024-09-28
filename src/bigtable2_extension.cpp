@@ -17,15 +17,13 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     return make_uniq<TableFunctionData>();
 }
 
-static OperatorResultType Bigtable2Function(ExecutionContext &context, TableFunctionInput &data_p, DataChunk &input, DataChunk &output) {
-    output.SetValue(0, 0, Value(1));
+void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
     output.SetCapacity(1);
-    return OperatorResultType::NEED_MORE_INPUT;
+    output.SetValue(0, 0, Value(1));
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
-    TableFunction bigtable_function("bigtable2", {LogicalType::VARCHAR}, nullptr, Bigtable2FunctionBind);
-    bigtable_function.in_out_function = Bigtable2Function;
+    TableFunction bigtable_function("bigtable2", {LogicalType::VARCHAR}, Bigtable2Function, Bigtable2FunctionBind);
     ExtensionUtil::RegisterFunction(*db.instance, bigtable_function);    
 }
 
