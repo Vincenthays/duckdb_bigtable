@@ -8,3 +8,5 @@ test/python/__pycache__/
 .Rhistory
 .vscode
 vcpkg_installed
+CMake*
+*.log
