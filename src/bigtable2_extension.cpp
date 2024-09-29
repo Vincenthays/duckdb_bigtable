@@ -53,7 +53,6 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
 
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
     auto &state = (Bigtable2FunctionData &)*data.bind_data;
-    // state.table->ReadRow("row-key", filter);
 
     for (StatusOr<cbt::Row>& row : state.table->ReadRows(
         cbt::RowSet("30000000001/202231/38590", "30000000001/202231/38593"),
