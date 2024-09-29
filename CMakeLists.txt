@@ -25,7 +25,7 @@ target_link_libraries(${TARGET_NAME}_loadable_extension google-cloud-cpp::bigtab
 
 # Install rules (optional, adjust as needed)
 install(
-  TARGETS ${TARGET_NAME}
+  TARGETS ${TARGET_NAME}_extension
   EXPORT "${DUCKDB_EXPORT_SET}"
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}"
   ARCHIVE DESTINATION "${INSTALL_LIB_DIR}"
