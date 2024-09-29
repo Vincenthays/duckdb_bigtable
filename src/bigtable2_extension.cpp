@@ -59,7 +59,14 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         cbt::Filter::PassAllFilter()
     )) {
         if (!row) throw std::move(row).status();
-        std::cout << row.value().row_key() << std::endl;
+        for (auto& cell : row.value().cells()) {
+            std::cout 
+                << cell.family_name()
+                << std::endl
+                << cell.column_qualifier()
+                << cell.value()
+                << std::endl;
+        }
     }
 
     if (state.row_idx >= 100) {
