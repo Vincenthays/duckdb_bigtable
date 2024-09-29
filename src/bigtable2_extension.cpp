@@ -62,8 +62,9 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         for (auto& cell : row.value().cells()) {
             std::cout 
                 << cell.family_name()
-                << std::endl
+                << ":"
                 << cell.column_qualifier()
+                << "="
                 << cell.value()
                 << std::endl;
         }
