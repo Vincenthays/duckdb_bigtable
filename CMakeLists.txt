@@ -6,23 +6,22 @@ set(TARGET_NAME bigtable2)
 # Define the project and specify the language (C++)
 project(${TARGET_NAME} LANGUAGES CXX)
 
-# Find the Google Cloud Bigtable package
-find_package(google_cloud_cpp_bigtable REQUIRED)
-
-# Include directories for headers
+# Include necessary directories
 include_directories(src/include)
+
+# Find Google Cloud Bigtable
+find_package(google_cloud_cpp_bigtable REQUIRED)
 
 # Set the source files for the extension
 set(EXTENSION_SOURCES src/bigtable2_extension.cpp)
 
-# Define the static library target
-add_library(${TARGET_NAME} STATIC ${EXTENSION_SOURCES})
-# Define the loadable extension target
-add_library(${TARGET_NAME}_loadable_extension SHARED ${EXTENSION_SOURCES})
+# Use DuckDB macros to build the static and loadable extensions
+build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
+build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})
 
-# Link the Google Cloud Bigtable library to both targets
-target_link_libraries(${TARGET_NAME} PUBLIC google-cloud-cpp::bigtable)
-target_link_libraries(${TARGET_NAME}_loadable_extension PUBLIC google-cloud-cpp::bigtable)
+# Use plain signature for target_link_libraries to match DuckDB's style
+target_link_libraries(${TARGET_NAME}_extension google-cloud-cpp::bigtable)
+target_link_libraries(${TARGET_NAME}_loadable_extension google-cloud-cpp::bigtable)
 
 # Install rules (optional, adjust as needed)
 install(
