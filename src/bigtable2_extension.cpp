@@ -6,12 +6,12 @@
 #include "duckdb/main/extension_util.hpp"
 #include <google/cloud/bigtable/table.h>
 
-
 using google::cloud::bigtable::Table;
-using google::cloud::bigtable::CreateDefaultDataClient;
-using google::cloud::bigtable::ClientOptions;
+using google::cloud::bigtable::MakeDataClient;
 using google::cloud::bigtable::Filter;
+using ::google::cloud::StatusOr;
 
+namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
@@ -42,7 +42,7 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     names.emplace_back("is_paid");
     return_types.emplace_back(LogicalType::LIST(LogicalType::BOOLEAN));
 
-    auto data_client = CreateDefaultDataClient("dataimpact-processing", "processing", ClientOptions());
+    auto data_client = MakeDataClient("dataimpact-processing", "processing");
     auto table = make_shared_ptr<Table>(data_client, "product");
 
     auto bind_data = make_uniq<Bigtable2FunctionData>();
@@ -54,6 +54,14 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
     auto &state = (Bigtable2FunctionData &)*data.bind_data;
     // state.table->ReadRow("row-key", filter);
+
+    for (StatusOr<cbt::Row>& row : state.table->ReadRows(
+        cbt::RowSet("30000000001/202231/38590", "30000000001/202231/38593"),
+        cbt::Filter::PassAllFilter()
+    )) {
+        if (!row) throw std::move(row).status();
+        std::cout << row.value().row_key() << std::endl;
+    }
 
     if (state.row_idx >= 100) {
         output.SetCardinality(0);
