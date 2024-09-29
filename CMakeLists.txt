@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
-# Set extension name here
 set(TARGET_NAME bigtable2)
 
-# Add project with CXX as language
 project(${TARGET_NAME} LANGUAGES CXX)
 
 find_package(google_cloud_cpp_bigtable REQUIRED)
