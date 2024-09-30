@@ -65,10 +65,9 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
     for (StatusOr<cbt::Row>& row : state.table->ReadRows(
         cbt::RowSet("30000000001/202231/38590", "30000000001/202231/38593"),
-        cbt::Filter::TimestampRangeMicros(1659312000000000 - 1000000, 1659312000000000 + 1000000)
+        cbt::Filter::PassAllFilter()
     )) {
         if (!row) throw std::move(row).status();
-        cardinality++;
         
         auto row_key = row.value().row_key();
         auto index_1 = row_key.find_first_of('/');
@@ -78,6 +77,10 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         string_t date = row_key.substr(index_1 + 1, index_2 - index_1 - 1);
         uint32_t shop_id = std::stoul(row_key.substr(index_2 + 1));
 
+        Value arr_date[7];
+        Value arr_price[7];
+        Value arr_base_price[7];
+        Value arr_unit_price[7];
         vector<Value> arr_promo_id[7];
         vector<Value> arr_promo_text[7];
         vector<Value> arr_shelf[7];
@@ -89,45 +92,51 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
             int weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 
-            output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
-            output.SetValue(1, state.row_idx, Value::DATE(date));
-            output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
+            arr_date[weekday] = Value::DATE(date);
 
             switch (cell.family_name().at(0)) {
             case 'p':
                 switch (cell.column_qualifier().at(0)) {
                 case 'p':
-                    output.SetValue(3, state.row_idx, Value(std::stof(cell.value())));
+                    arr_price[weekday] = Value(std::stof(cell.value()));
                     break;
                 case 'b':
-                    output.SetValue(4, state.row_idx, Value(std::stof(cell.value())));
+                    arr_base_price[weekday] = Value(std::stof(cell.value()));
                     break;
-                case 'u':
-                    output.SetValue(5, state.row_idx, Value(std::stof(cell.value())));
+                    case 'u':
+                    arr_unit_price[weekday] = Value(std::stof(cell.value()));
                     break;
                 }
                 break;
             case 'd':
-                arr_promo_id[0].emplace_back(Value(std::stoi(cell.column_qualifier())));
-                arr_promo_text[0].emplace_back(Value(cell.value()));
+                arr_promo_id[weekday].emplace_back(Value(std::stoi(cell.column_qualifier())));
+                arr_promo_text[weekday].emplace_back(Value(cell.value()));
                 break;
             case 's' | 'S':
-                arr_shelf[0].emplace_back(cell.column_qualifier());
-                arr_position[0].emplace_back(Value(std::stoi(cell.value())));
-                arr_is_paid[0].emplace_back(Value(cell.column_qualifier().at(0) == 'S'));
-                break;
-            default:
+                arr_shelf[weekday].emplace_back(cell.column_qualifier());
+                arr_position[weekday].emplace_back(Value(std::stoi(cell.value())));
+                arr_is_paid[weekday].emplace_back(Value(cell.column_qualifier().at(0) == 'S'));
                 break;
             }
         }
-        output.SetValue(6, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(arr_promo_id[0])));
-        output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(arr_promo_text[0])));
-        output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(arr_shelf[0])));
-        output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(arr_position[0])));
-        output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, std::move(arr_is_paid[0])));
+
+        for (int i = 0; i < 7; i++) {
+            if (arr_date[i] > Value::DATE(1970, 1, 1)) {
+                output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
+                output.SetValue(1, state.row_idx, arr_date[i]);
+                output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
+                output.SetValue(6, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(arr_promo_id[i])));
+                output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(arr_promo_text[i])));
+                output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(arr_shelf[i])));
+                output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(arr_position[i])));
+                output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, std::move(arr_is_paid[i])));
+
+                cardinality++;
+                state.row_idx++;
+            }
+        }
     }
 
-    state.row_idx++;
     output.SetCardinality(cardinality);
 }
 
