@@ -86,8 +86,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         
         for (auto& cell : row.value().cells()) {
             
-            auto date = Date::EpochToDate(cell.timestamp().count() / 1000000);
-            auto weekday = Date::ExtractISODayOfTheWeek(date) - 1;
+            date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
+            int weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 
             output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
             output.SetValue(1, state.row_idx, Value::DATE(date));
