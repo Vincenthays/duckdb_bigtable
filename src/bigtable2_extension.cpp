@@ -55,13 +55,20 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
 
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
     auto &state = (Bigtable2FunctionData &)*data.bind_data;
-    idx_t cardinality = 0; 
+
+    if (state.row_idx == 1) {
+        output.SetCardinality(0);
+        return;
+    }
+
+    idx_t cardinality = 0;
 
     for (StatusOr<cbt::Row>& row : state.table->ReadRows(
         cbt::RowSet("30000000001/202231/38590", "30000000001/202231/38593"),
         cbt::Filter::TimestampRangeMicros(1659312000000000 - 1000000, 1659312000000000 + 1000000)
     )) {
         if (!row) throw std::move(row).status();
+        cardinality++;
         
         auto row_key = row.value().row_key();
         auto index_1 = row_key.find_first_of('/');
@@ -113,16 +120,9 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(arr_shelf[0])));
         output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(arr_position[0])));
         output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, std::move(arr_is_paid[0])));
-
-        cardinality++;
-        state.row_idx++;
     }
 
-    if (state.row_idx >= 100) {
-        output.SetCardinality(0);
-        return;
-    }
-
+    state.row_idx++;
     output.SetCardinality(cardinality);
 }
 
