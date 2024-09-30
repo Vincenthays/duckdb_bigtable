@@ -62,7 +62,14 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         cbt::Filter::TimestampRangeMicros(1659312000000000 - 1000000, 1659312000000000 + 1000000)
     )) {
         if (!row) throw std::move(row).status();
+        
         auto row_key = row.value().row_key();
+        auto index_1 = row_key.find_first_of('/');
+        auto index_2 =  row_key.find_last_of('/');
+
+        uint64_t pe_id = std::stoul(row_key.substr(0, index_1));
+        string_t date = row_key.substr(index_1 + 1, index_2 - index_1 - 1);
+        uint32_t shop_id = std::stoul(row_key.substr(index_2 + 1));
 
         vector<Value> arr_promo_id[7];
         vector<Value> arr_promo_text[7];
@@ -71,17 +78,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         vector<Value> arr_is_paid[7];
         
         for (auto& cell : row.value().cells()) {
-            std::cout 
-                << row_key
-                << "@"
-                << cell.timestamp().count()
-                << " "
-                << cell.family_name()
-                << ":"
-                << cell.column_qualifier()
-                << "="
-                << cell.value()
-                << std::endl;
+            output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
+            output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
 
             switch (cell.family_name().at(0)) {
             case 'p':
