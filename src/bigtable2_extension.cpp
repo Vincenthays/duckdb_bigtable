@@ -85,7 +85,12 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         vector<Value> arr_is_paid[7];
         
         for (auto& cell : row.value().cells()) {
+            
+            auto date = Date::EpochToDate(cell.timestamp().count() / 1000000);
+            auto weekday = Date::ExtractISODayOfTheWeek(date) - 1;
+
             output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
+            output.SetValue(1, state.row_idx, Value::DATE(date));
             output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
 
             switch (cell.family_name().at(0)) {
