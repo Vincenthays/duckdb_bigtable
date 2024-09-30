@@ -23,6 +23,8 @@ struct Bigtable2FunctionData : TableFunctionData {
 static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types, vector<string> &names) {
     names.emplace_back("pe_id");
     return_types.emplace_back(LogicalType::UBIGINT);
+    names.emplace_back("date");
+    return_types.emplace_back(LogicalType::DATE);
     names.emplace_back("shop_id");
     return_types.emplace_back(LogicalType::UINTEGER);
     names.emplace_back("price");
@@ -80,13 +82,13 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             case 'p':
                 switch (cell.column_qualifier().at(0)) {
                 case 'p':
-                    output.SetValue(2, state.row_idx, Value(std::stof(cell.value())));
-                    break;
-                case 'b':
                     output.SetValue(3, state.row_idx, Value(std::stof(cell.value())));
                     break;
-                case 'u':
+                case 'b':
                     output.SetValue(4, state.row_idx, Value(std::stof(cell.value())));
+                    break;
+                case 'u':
+                    output.SetValue(5, state.row_idx, Value(std::stof(cell.value())));
                     break;
                 }
                 break;
@@ -103,11 +105,11 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
                 break;
             }
         }
-        output.SetValue(5, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(promo_id)));
-        output.SetValue(6, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(promo_text)));
-        output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(shelf)));
-        output.SetValue(8, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(position)));
-        output.SetValue(9, state.row_idx, Value::LIST(LogicalType::BOOLEAN, std::move(is_paid)));
+        output.SetValue(6, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(promo_id)));
+        output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(promo_text)));
+        output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(shelf)));
+        output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(position)));
+        output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, std::move(is_paid)));
 
         cardinality++;
         state.row_idx++;
