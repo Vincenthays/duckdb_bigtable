@@ -59,18 +59,31 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
     for (StatusOr<cbt::Row>& row : state.table->ReadRows(
         cbt::RowSet("30000000001/202231/38590", "30000000001/202231/38593"),
-        cbt::Filter::PassAllFilter()
+        cbt::Filter::TimestampRangeMicros(1659312000000000 - 1000000, 1659312000000000 + 1000000)
     )) {
         if (!row) throw std::move(row).status();
+        auto row_key = row.value().row_key();
 
-        vector<Value> promo_id;
-        vector<Value> promo_text;
-        vector<Value> shelf;
-        vector<Value> position;
-        vector<Value> is_paid;
+        vector<Value> arr_promo_id[7];
+        vector<Value> arr_promo_text[7];
+        vector<Value> arr_shelf[7];
+        vector<Value> arr_position[7];
+        vector<Value> arr_is_paid[7];
         
         for (auto& cell : row.value().cells()) {
+
+            auto time = cell.timestamp().count();
+            auto time_now = std::chrono::system_clock::to_time_t(time);
+            auto* calendar_time = std::localtime(&time_now);
+            std::cout << "Year: " << 1900 + calendar_time->tm_year << std::endl;
+            std::cout << "Month: " << 1 + calendar_time->tm_mon << std::endl; // tm_mon is [0, 11], hence +1
+            std::cout << "Day: " << calendar_time->tm_mday << std::endl;
+
             std::cout 
+                << row_key
+                << "@"
+                << cell.timestamp().count()
+                << " "
                 << cell.family_name()
                 << ":"
                 << cell.column_qualifier()
@@ -93,23 +106,23 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
                 }
                 break;
             case 'd':
-                promo_id.emplace_back(Value(std::stoi(cell.column_qualifier())));
-                promo_text.emplace_back(Value(cell.value()));
+                arr_promo_id[0].emplace_back(Value(std::stoi(cell.column_qualifier())));
+                arr_promo_text[0].emplace_back(Value(cell.value()));
                 break;
             case 's' | 'S':
-                shelf.emplace_back(cell.column_qualifier());
-                position.emplace_back(Value(std::stoi(cell.value())));
-                is_paid.emplace_back(Value(cell.column_qualifier().at(0) == 'S'));
+                arr_shelf[0].emplace_back(cell.column_qualifier());
+                arr_position[0].emplace_back(Value(std::stoi(cell.value())));
+                arr_is_paid[0].emplace_back(Value(cell.column_qualifier().at(0) == 'S'));
                 break;
             default:
                 break;
             }
         }
-        output.SetValue(6, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(promo_id)));
-        output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(promo_text)));
-        output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(shelf)));
-        output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(position)));
-        output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, std::move(is_paid)));
+        output.SetValue(6, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(arr_promo_id[0])));
+        output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(arr_promo_text[0])));
+        output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(arr_shelf[0])));
+        output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(arr_position[0])));
+        output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, std::move(arr_is_paid[0])));
 
         cardinality++;
         state.row_idx++;

@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.5)
 set(TARGET_NAME bigtable2)
 
 # Define the project and specify the language (C++)
-project(${TARGET_NAME} LANGUAGES CXX)
+project(${TARGET_NAME})
 
 # Include necessary directories
 include_directories(src/include)
