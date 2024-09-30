@@ -71,14 +71,6 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         vector<Value> arr_is_paid[7];
         
         for (auto& cell : row.value().cells()) {
-
-            auto time = cell.timestamp().count();
-            auto time_now = std::chrono::system_clock::to_time_t(time);
-            auto* calendar_time = std::localtime(&time_now);
-            std::cout << "Year: " << 1900 + calendar_time->tm_year << std::endl;
-            std::cout << "Month: " << 1 + calendar_time->tm_mon << std::endl; // tm_mon is [0, 11], hence +1
-            std::cout << "Day: " << calendar_time->tm_mday << std::endl;
-
             std::cout 
                 << row_key
                 << "@"
