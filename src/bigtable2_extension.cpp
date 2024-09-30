@@ -103,7 +103,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
                 case 'b':
                     arr_base_price[weekday] = Value(std::stof(cell.value()));
                     break;
-                    case 'u':
+                case 'u':
                     arr_unit_price[weekday] = Value(std::stof(cell.value()));
                     break;
                 }
