@@ -133,22 +133,26 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
         for (int i = 0; i < 7; i++) {
             auto date = arr_date[i];
-            if (date > Value::DATE(1970, 1, 1)) {
-                output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
-                output.SetValue(1, state.row_idx, date);
-                output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
-                output.SetValue(3, state.row_idx, arr_price[i]);
-                output.SetValue(4, state.row_idx, arr_base_price[i]);
-                output.SetValue(5, state.row_idx, arr_unit_price[i]);
-                output.SetValue(6, state.row_idx, Value::LIST(LogicalType::UINTEGER, arr_promo_id[i]));
-                output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, arr_promo_text[i]));
-                output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, arr_shelf[i]));
-                output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, arr_position[i]));
-                output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, arr_is_paid[i]));
-
-                cardinality++;
-                state.row_idx++;
+            if (date.IsNull()) {
+                continue;
             }
+            if (date == Value::DATE(1970, 1, 1)) {
+                continue;
+            }
+            output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
+            output.SetValue(1, state.row_idx, date);
+            output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
+            output.SetValue(3, state.row_idx, arr_price[i]);
+            output.SetValue(4, state.row_idx, arr_base_price[i]);
+            output.SetValue(5, state.row_idx, arr_unit_price[i]);
+            output.SetValue(6, state.row_idx, Value::LIST(LogicalType::UINTEGER, arr_promo_id[i]));
+            output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, arr_promo_text[i]));
+            output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, arr_shelf[i]));
+            output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, arr_position[i]));
+            output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, arr_is_paid[i]));
+
+            cardinality++;
+            state.row_idx++;
         }
     }
     output.SetCardinality(cardinality);
