@@ -56,7 +56,7 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
     auto &state = (Bigtable2FunctionData &)*data.bind_data;
 
-    if (state.row_idx == 1) {
+    if (state.row_idx > 1) {
         output.SetCardinality(0);
         return;
     }
@@ -121,15 +121,19 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         }
 
         for (int i = 0; i < 7; i++) {
-            if (arr_date[i] > Value::DATE(1970, 1, 1)) {
+            auto date = arr_date[i];
+            if (date > Value::DATE(1970, 1, 1)) {
                 output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
-                output.SetValue(1, state.row_idx, arr_date[i]);
+                output.SetValue(1, state.row_idx, date);
                 output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
-                output.SetValue(6, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(arr_promo_id[i])));
-                output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(arr_promo_text[i])));
-                output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, std::move(arr_shelf[i])));
-                output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, std::move(arr_position[i])));
-                output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, std::move(arr_is_paid[i])));
+                output.SetValue(3, state.row_idx, arr_price[i]);
+                output.SetValue(4, state.row_idx, arr_base_price[i]);
+                output.SetValue(5, state.row_idx, arr_unit_price[i]);
+                output.SetValue(6, state.row_idx, Value::LIST(LogicalType::UINTEGER, arr_promo_id[i]));
+                output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, arr_promo_text[i]));
+                output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, arr_shelf[i]));
+                output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, arr_position[i]));
+                output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, arr_is_paid[i]));
 
                 cardinality++;
                 state.row_idx++;
