@@ -17,6 +17,9 @@ namespace duckdb {
 
 struct Bigtable2FunctionData : TableFunctionData {
     idx_t row_idx = 0;
+    idx_t prefix_idx = 0;
+    idx_t prefix_count;
+    vector<string> prefixes;
     shared_ptr<Table> table;
 };
 
@@ -50,13 +53,21 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     auto bind_data = make_uniq<Bigtable2FunctionData>();
     bind_data->table = table;
 
+    auto prefixes = ListValue::GetChildren(input.inputs[0]);
+
+    for (auto &p : prefixes) {
+        bind_data->prefix_count++;
+        string prefix = StringValue::Get(p);
+        bind_data->prefixes.emplace_back(prefix);
+    }
+
     return std::move(bind_data);
 }
 
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
     auto &state = (Bigtable2FunctionData &)*data.bind_data;
 
-    if (state.row_idx > 1) {
+    if (state.prefix_idx == state.prefix_count) {
         output.SetCardinality(0);
         return;
     }
@@ -64,7 +75,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     idx_t cardinality = 0;
 
     for (StatusOr<cbt::Row>& row : state.table->ReadRows(
-        cbt::RowSet("30000000001/202231/38590", "30000000001/202231/38593"),
+        cbt::RowSet(state.prefixes[state.prefix_idx++]),
         cbt::Filter::PassAllFilter()
     )) {
         if (!row) throw std::move(row).status();
@@ -140,12 +151,11 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             }
         }
     }
-
     output.SetCardinality(cardinality);
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
-    TableFunction bigtable_function("bigtable2", {LogicalType::LIST(LogicalType::INTEGER)}, Bigtable2Function, Bigtable2FunctionBind);
+    TableFunction bigtable_function("bigtable2", {LogicalType::LIST(LogicalType::VARCHAR)}, Bigtable2Function, Bigtable2FunctionBind);
     ExtensionUtil::RegisterFunction(*db.instance, bigtable_function);
 }
 
