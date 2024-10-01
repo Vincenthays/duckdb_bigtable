@@ -75,7 +75,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     idx_t cardinality = 0;
 
     for (StatusOr<cbt::Row>& row : state.table->ReadRows(
-        cbt::RowSet(state.prefixes[state.prefix_idx++]),
+        cbt::RowRange::Prefix(state.prefixes[state.prefix_idx++]),
         cbt::Filter::PassAllFilter()
     )) {
         if (!row) throw std::move(row).status();
@@ -109,13 +109,13 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             case 'p':
                 switch (cell.column_qualifier().at(0)) {
                 case 'p':
-                    arr_price[weekday] = Value(std::stof(cell.value()));
+                    arr_price[weekday] = Value(std::stod(cell.value()));
                     break;
                 case 'b':
-                    arr_base_price[weekday] = Value(std::stof(cell.value()));
+                    arr_base_price[weekday] = Value(std::stod(cell.value()));
                     break;
                 case 'u':
-                    arr_unit_price[weekday] = Value(std::stof(cell.value()));
+                    arr_unit_price[weekday] = Value(std::stod(cell.value()));
                     break;
                 }
                 break;
