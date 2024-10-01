@@ -88,6 +88,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         string_t date = row_key.substr(index_1 + 1, index_2 - index_1 - 1);
         uint32_t shop_id = std::stoul(row_key.substr(index_2 + 1));
 
+        bool arr_mask[7];
         Value arr_date[7];
         Value arr_price[7];
         Value arr_base_price[7];
@@ -102,7 +103,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             
             date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
             int weekday = Date::ExtractISODayOfTheWeek(date) - 1;
-
+            
+            arr_mask[weekday] = true;
             arr_date[weekday] = Value::DATE(date);
 
             switch (cell.family_name().at(0)) {
@@ -132,15 +134,11 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         }
 
         for (int i = 0; i < 7; i++) {
-            auto date = arr_date[i];
-            if (date.IsNull()) {
-                continue;
-            }
-            if (date == Value::DATE(1970, 1, 1)) {
+            if (!arr_mask[i]) {
                 continue;
             }
             output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
-            output.SetValue(1, state.row_idx, date);
+            output.SetValue(1, state.row_idx, arr_date[i]);
             output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
             output.SetValue(3, state.row_idx, arr_price[i]);
             output.SetValue(4, state.row_idx, arr_base_price[i]);
@@ -155,6 +153,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             state.row_idx++;
         }
     }
+    
     output.SetCardinality(cardinality);
 }
 
