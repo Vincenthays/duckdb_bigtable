@@ -133,7 +133,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
         for (int i = 0; i < 7; i++) {
             auto date = arr_date[i];
-            if (date > Value::DATE(1970, 1, 1)) {
+            if (!date.IsNull()) {
                 output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
                 output.SetValue(1, state.row_idx, date);
                 output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
