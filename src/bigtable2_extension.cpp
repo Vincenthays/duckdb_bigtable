@@ -47,19 +47,18 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     names.emplace_back("is_paid");
     return_types.emplace_back(LogicalType::LIST(LogicalType::BOOLEAN));
 
+    auto bind_data = make_uniq<Bigtable2FunctionData>();
+
     auto data_client = MakeDataClient("dataimpact-processing", "processing");
     auto table = make_shared_ptr<Table>(data_client, "product");
-
-    auto bind_data = make_uniq<Bigtable2FunctionData>();
     bind_data->table = table;
-
+    
     auto prefixes = ListValue::GetChildren(input.inputs[0]);
-
     for (auto &p : prefixes) {
-        bind_data->prefix_count++;
         string prefix = StringValue::Get(p);
         bind_data->prefixes.emplace_back(prefix);
     }
+    bind_data->prefix_count = bind_data->prefixes.size();
 
     return std::move(bind_data);
 }
