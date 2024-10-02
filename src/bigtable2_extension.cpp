@@ -128,7 +128,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
                 arr_promo_text[weekday].emplace_back(Value(cell.value()));
                 break;
             case 's' | 'S':
-                arr_shelf[weekday].emplace_back(cell.column_qualifier());
+                arr_shelf[weekday].emplace_back(Value(cell.column_qualifier()));
                 arr_position[weekday].emplace_back(Value(std::stoi(cell.value())));
                 arr_is_paid[weekday].emplace_back(Value(cell.column_qualifier().at(0) == 'S'));
                 break;
@@ -145,7 +145,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             output.SetValue(3, state.row_idx, arr_price[i]);
             output.SetValue(4, state.row_idx, arr_base_price[i]);
             output.SetValue(5, state.row_idx, arr_unit_price[i]);
-            
+
             if (arr_promo_id[i].size() > 0) {
                 output.SetValue(6, state.row_idx, Value::LIST(arr_promo_id[i]));
             }
