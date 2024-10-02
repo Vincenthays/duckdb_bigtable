@@ -113,24 +113,24 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             case 'p':
                 switch (cell.column_qualifier().at(0)) {
                 case 'p':
-                    arr_price[weekday] = Value(std::stod(cell.value()));
+                    arr_price[weekday] = std::stod(cell.value());
                     break;
                 case 'b':
-                    arr_base_price[weekday] = Value(std::stod(cell.value()));
+                    arr_base_price[weekday] = std::stod(cell.value());
                     break;
                 case 'u':
-                    arr_unit_price[weekday] = Value(std::stod(cell.value()));
+                    arr_unit_price[weekday] = std::stod(cell.value());
                     break;
                 }
                 break;
             case 'd':
-                arr_promo_id[weekday].emplace_back(Value(std::stoi(cell.column_qualifier())));
-                arr_promo_text[weekday].emplace_back(Value(cell.value()));
+                arr_promo_id[weekday].emplace_back(std::stoi(cell.column_qualifier()));
+                arr_promo_text[weekday].emplace_back(cell.value());
                 break;
             case 's' | 'S':
-                arr_shelf[weekday].emplace_back(Value(cell.column_qualifier()));
-                arr_position[weekday].emplace_back(Value(std::stoi(cell.value())));
-                arr_is_paid[weekday].emplace_back(Value(cell.column_qualifier().at(0) == 'S'));
+                arr_shelf[weekday].emplace_back(cell.column_qualifier());
+                arr_position[weekday].emplace_back(std::stoi(cell.value()));
+                arr_is_paid[weekday].emplace_back(cell.column_qualifier().at(0) == 'S');
                 break;
             }
         }
