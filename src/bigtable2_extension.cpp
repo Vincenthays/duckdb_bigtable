@@ -100,24 +100,12 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         vector<Value> arr_shelf[7];
         vector<Value> arr_position[7];
         vector<Value> arr_is_paid[7];
-
-        for (int i = 0; i < 7; i++) {
-            arr_mask[i] = false;
-            arr_date[i] = Value::DATE(Date::EpochToDate(0));
-            arr_price[i] = Value(0.0);
-            arr_base_price[i] = Value(0.0);
-            arr_unit_price[i] = Value(0.0);
-            arr_promo_id[i] = vector<Value>();
-            arr_promo_text[i] = vector<Value>();
-            arr_shelf[i] = vector<Value>();
-            arr_position[i] = vector<Value>();
-            arr_is_paid[i] = vector<Value>();
-        }
         
         for (auto& cell : row.value().cells()) {
             
             date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
             int weekday = Date::ExtractISODayOfTheWeek(date) - 1;
+            assert(weekday >= 0 && weekday <= 6);
             
             arr_mask[weekday] = true;
             arr_date[weekday] = Value::DATE(date);
@@ -152,28 +140,17 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             if (!arr_mask[i]) {
                 continue;
             }
-            
             output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
             output.SetValue(1, state.row_idx, arr_date[i]);
             output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
             output.SetValue(3, state.row_idx, arr_price[i]);
             output.SetValue(4, state.row_idx, arr_base_price[i]);
             output.SetValue(5, state.row_idx, arr_unit_price[i]);
-            if (arr_promo_id[i].size() > 0) {
-                output.SetValue(6, state.row_idx, Value::LIST(arr_promo_id[i]));
-            }
-            if (arr_promo_text[i].size() > 0) {
-                output.SetValue(7, state.row_idx, Value::LIST(arr_promo_text[i]));
-            }
-            if (arr_shelf[i].size() > 0) {
-                output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
-            }
-            if (arr_position[i].size() > 0) {
-                output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
-            }
-            if (arr_is_paid[i].size() > 0) {
-                output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
-            }
+            output.SetValue(6, state.row_idx, Value::LIST(LogicalType::UINTEGER, arr_promo_id[i]));
+            output.SetValue(7, state.row_idx, Value::LIST(LogicalType::VARCHAR, arr_promo_text[i]));
+            output.SetValue(8, state.row_idx, Value::LIST(LogicalType::VARCHAR, arr_shelf[i]));
+            output.SetValue(9, state.row_idx, Value::LIST(LogicalType::UINTEGER, arr_position[i]));
+            output.SetValue(10, state.row_idx, Value::LIST(LogicalType::BOOLEAN, arr_is_paid[i]));
 
             cardinality++;
             state.row_idx++;
