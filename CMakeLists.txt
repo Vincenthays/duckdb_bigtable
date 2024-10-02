@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 # Set extension name here
 set(TARGET_NAME bigtable2)
 
-# Define the project and specify the language (C++)
+# Define the project
 project(${TARGET_NAME})
 
 # Include necessary directories
