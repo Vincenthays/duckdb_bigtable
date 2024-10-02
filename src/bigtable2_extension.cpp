@@ -87,7 +87,6 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         reverse(prefix_id.begin(), prefix_id.end());
 
         uint64_t pe_id = std::stoul(prefix_id);
-        string_t date = row_key.substr(index_1 + 1, index_2 - index_1 - 1);
         uint32_t shop_id = std::stoul(row_key.substr(index_2 + 1));
 
         bool arr_mask[7];
