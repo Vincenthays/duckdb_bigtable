@@ -104,7 +104,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         for (auto& cell : row.value().cells()) {
             
             date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
-            int weekday = Date::ExtractISODayOfTheWeek(date) - 1;
+            int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
             
             arr_mask[weekday] = true;
             arr_date[weekday] = Value::DATE(date);
