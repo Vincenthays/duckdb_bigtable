@@ -56,7 +56,7 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     auto prefixes = ListValue::GetChildren(input.inputs[0]);
     for (auto &p : prefixes) {
         string prefix = StringValue::Get(p);
-        bind_data->prefixes.emplace_back(prefix);
+        bind_data->prefixes.emplace_back(std::move(prefix));
     }
     bind_data->prefix_count = bind_data->prefixes.size();
 
@@ -81,7 +81,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         
         auto row_key = row.value().row_key();
         auto index_1 = row_key.find_first_of('/');
-        auto index_2 =  row_key.find_last_of('/');
+        auto index_2 = row_key.find_last_of('/');
 
         string prefix_id = row_key.substr(0, index_1);
         reverse(prefix_id.begin(), prefix_id.end());
