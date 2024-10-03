@@ -37,9 +37,9 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     names.emplace_back("unit_price");
     return_types.emplace_back(LogicalType::FLOAT);
     names.emplace_back("promo_id");
-    return_types.emplace_back(LogicalType::LIST(LogicalType::UINTEGER));
+    return_types.emplace_back((LogicalType::UINTEGER);
     names.emplace_back("promo_text");
-    return_types.emplace_back(LogicalType::LIST(LogicalType::VARCHAR));
+    return_types.emplace_back(LogicalType::VARCHAR);
     names.emplace_back("shelf");
     return_types.emplace_back(LogicalType::LIST(LogicalType::VARCHAR));
     names.emplace_back("position");
@@ -94,12 +94,19 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         Value arr_price[7];
         Value arr_base_price[7];
         Value arr_unit_price[7];
-        vector<Value> arr_promo_id[7];
-        vector<Value> arr_promo_text[7];
+        Value arr_promo_id[7];
+        Value arr_promo_text[7];
         vector<Value> arr_shelf[7];
         vector<Value> arr_position[7];
         vector<Value> arr_is_paid[7];
-        
+
+        for (int i = 0; i < 7; i++) {
+            arr_mask[i] = false;
+            arr_shelf[i].clear();
+            arr_position[i].clear();
+            arr_is_paid[i].clear();
+        }
+
         for (auto& cell : row.value().cells()) {
             
             date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
@@ -123,8 +130,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
                 }
                 break;
             case 'd':
-                arr_promo_id[weekday].emplace_back(std::stoi(cell.column_qualifier()));
-                arr_promo_text[weekday].emplace_back(cell.value());
+                arr_promo_id[weekday] = std::stoi(cell.column_qualifier());
+                arr_promo_text[weekday] = cell.value();
                 break;
             case 's' | 'S':
                 arr_shelf[weekday].emplace_back(cell.column_qualifier());
@@ -144,21 +151,23 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             output.SetValue(3, state.row_idx, arr_price[i]);
             output.SetValue(4, state.row_idx, arr_base_price[i]);
             output.SetValue(5, state.row_idx, arr_unit_price[i]);
+            output.SetValue(6, state.row_idx, arr_promo_id[i]);
+            output.SetValue(7, state.row_idx, arr_promo_text[i]);
 
-            if (!arr_promo_id[i].empty()) {
-                output.SetValue(6, state.row_idx, Value::LIST(arr_promo_id[i]));
-            }
-            if (!arr_promo_text[i].empty()) {
-                output.SetValue(7, state.row_idx, Value::LIST(arr_promo_text[i]));
-            }
             if (!arr_shelf[i].empty()) {
-                output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
+                if (arr_shelf[i].size() < 5) {
+                    output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
+                }
             }
             if (!arr_position[i].empty()) {
-                output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
+                if (arr_position[i].size() < 5) {
+                    output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
+                }
             }
             if (!arr_is_paid[i].empty()) {
-                output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
+                if (arr_is_paid[i].size() < 5) {
+                    output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
+                }
             }
 
             cardinality++;
