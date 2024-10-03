@@ -37,7 +37,7 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     names.emplace_back("unit_price");
     return_types.emplace_back(LogicalType::FLOAT);
     names.emplace_back("promo_id");
-    return_types.emplace_back((LogicalType::UINTEGER);
+    return_types.emplace_back(LogicalType::UINTEGER);
     names.emplace_back("promo_text");
     return_types.emplace_back(LogicalType::VARCHAR);
     names.emplace_back("shelf");
@@ -155,19 +155,13 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             output.SetValue(7, state.row_idx, arr_promo_text[i]);
 
             if (!arr_shelf[i].empty()) {
-                if (arr_shelf[i].size() < 5) {
-                    output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
-                }
+                output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
             }
             if (!arr_position[i].empty()) {
-                if (arr_position[i].size() < 5) {
-                    output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
-                }
+                output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
             }
             if (!arr_is_paid[i].empty()) {
-                if (arr_is_paid[i].size() < 5) {
-                    output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
-                }
+                output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
             }
 
             cardinality++;
