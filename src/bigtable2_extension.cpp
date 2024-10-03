@@ -53,10 +53,12 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
     auto table = make_shared_ptr<Table>(data_client, "product");
     bind_data->table = table;
     
-    auto prefixes = ListValue::GetChildren(input.inputs[0]);
-    for (auto &p : prefixes) {
-        string prefix = StringValue::Get(p);
-        bind_data->prefixes.emplace_back(std::move(prefix));
+    auto ls_pe_id = ListValue::GetChildren(input.inputs[0]);
+    for (auto &pe_id : ls_pe_id) {
+        string prefix_id = StringValue::Get(pe_id);
+        reverse(prefix_id.begin(), prefix_id.end());
+        prefix_id += "/";
+        bind_data->prefixes.emplace_back(std::move(prefix_id));
     }
     bind_data->prefix_count = bind_data->prefixes.size();
 
@@ -76,7 +78,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     auto range = cbt::RowRange::Prefix(state.prefixes[state.prefix_idx++]);
     auto filter = Filter::PassAllFilter();
 
-    for (StatusOr<cbt::Row>& row : state.table->ReadRows(range, 300, filter)) {
+    for (StatusOr<cbt::Row>& row : state.table->ReadRows(range, 100, filter)) {
         if (!row) throw std::move(row).status();
         
         auto row_key = row.value().row_key();
