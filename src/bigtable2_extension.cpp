@@ -73,10 +73,10 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
     idx_t cardinality = 0;
 
-    for (StatusOr<cbt::Row>& row : state.table->ReadRows(
-        cbt::RowRange::Prefix(state.prefixes[state.prefix_idx++]),
-        cbt::Filter::PassAllFilter()
-    )) {
+    auto range = cbt::RowRange::Prefix(state.prefixes[state.prefix_idx++]);
+    auto filter = Filter::PassAllFilter();
+
+    for (StatusOr<cbt::Row>& row : state.table->ReadRows(range, 300, filter)) {
         if (!row) throw std::move(row).status();
         
         auto row_key = row.value().row_key();
@@ -145,19 +145,19 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             output.SetValue(4, state.row_idx, arr_base_price[i]);
             output.SetValue(5, state.row_idx, arr_unit_price[i]);
 
-            if (arr_promo_id[i].size() > 0) {
+            if (!arr_promo_id[i].empty()) {
                 output.SetValue(6, state.row_idx, Value::LIST(arr_promo_id[i]));
             }
-            if (arr_promo_text[i].size() > 0) {
+            if (!arr_promo_text[i].empty()) {
                 output.SetValue(7, state.row_idx, Value::LIST(arr_promo_text[i]));
             }
-            if (arr_shelf[i].size() > 0) {
+            if (!arr_shelf[i].empty()) {
                 output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
             }
-            if (arr_position[i].size() > 0) {
+            if (!arr_position[i].empty()) {
                 output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
             }
-            if (arr_is_paid[i].size() > 0) {
+            if (!arr_is_paid[i].empty()) {
                 output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
             }
 
