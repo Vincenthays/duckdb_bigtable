@@ -83,8 +83,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data,
   auto filter = Filter::PassAllFilter();
 
   for (StatusOr<cbt::Row> &row : state.table->ReadRows(range, 100, filter)) {
-    if (!row)
-      throw std::move(row).status();
+    if (!row) throw std::move(row).status();
 
     auto row_key = row.value().row_key();
     auto index_1 = row_key.find_first_of('/');
@@ -109,9 +108,6 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data,
 
     for (int i = 0; i < 7; i++) {
       arr_mask[i] = false;
-      arr_shelf[i].clear();
-      arr_position[i].clear();
-      arr_is_paid[i].clear();
     }
 
     for (auto &cell : row.value().cells()) {
@@ -149,9 +145,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data,
     }
 
     for (int i = 0; i < 7; i++) {
-      if (!arr_mask[i]) {
-        continue;
-      }
+      if (!arr_mask[i]) continue;
+    
       output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
       output.SetValue(1, state.row_idx, arr_date[i]);
       output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
@@ -160,16 +155,9 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data,
       output.SetValue(5, state.row_idx, arr_unit_price[i]);
       output.SetValue(6, state.row_idx, arr_promo_id[i]);
       output.SetValue(7, state.row_idx, arr_promo_text[i]);
-
-      if (!arr_shelf[i].empty()) {
-        output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
-      }
-      if (!arr_position[i].empty()) {
-        output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
-      }
-      if (!arr_is_paid[i].empty()) {
-        output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
-      }
+      if (!arr_shelf[i].empty()) output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
+      if (!arr_position[i].empty()) output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
+      if (!arr_is_paid[i].empty()) output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
 
       cardinality++;
       state.row_idx++;
