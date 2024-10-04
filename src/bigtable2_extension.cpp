@@ -168,9 +168,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data,
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
-  TableFunction bigtable_function("bigtable2",
-                                  {LogicalType::LIST(LogicalType::VARCHAR)},
-                                  Bigtable2Function, Bigtable2FunctionBind);
+  TableFunction bigtable_function("bigtable2", {LogicalType::LIST(LogicalType::VARCHAR)}, Bigtable2Function, Bigtable2FunctionBind);
   ExtensionUtil::RegisterFunction(*db.instance, bigtable_function);
 }
 
