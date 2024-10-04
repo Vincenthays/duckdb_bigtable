@@ -21,12 +21,12 @@ build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})
 
 # Use plain signature for target_link_libraries to match DuckDB's style
 target_link_libraries(${TARGET_NAME}_extension google-cloud-cpp::bigtable)
-target_link_libraries(${TARGET_NAME}_loadable_extension google-cloud-cpp::bigtable)
+target_link_libraries(${TARGET_NAME}_loadable_extension
+                      google-cloud-cpp::bigtable)
 
 # Install rules (optional, adjust as needed)
 install(
   TARGETS ${TARGET_NAME}_extension
   EXPORT "${DUCKDB_EXPORT_SET}"
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}"
-  ARCHIVE DESTINATION "${INSTALL_LIB_DIR}"
-)
+  ARCHIVE DESTINATION "${INSTALL_LIB_DIR}")
