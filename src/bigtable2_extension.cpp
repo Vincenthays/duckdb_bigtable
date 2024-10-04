@@ -136,7 +136,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       case 's' | 'S':
         arr_shelf[weekday].emplace_back(cell.column_qualifier());
         arr_position[weekday].emplace_back(std::stoi(cell.value()));
-        arr_is_paid[weekday].emplace_back(cell.column_qualifier().at(0) == 'S');
+        arr_is_paid[weekday].emplace_back(cell.family_name().at(0) == 'S');
         break;
       }
     }
