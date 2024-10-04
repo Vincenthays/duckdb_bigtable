@@ -68,8 +68,7 @@ Bigtable2FunctionBind(ClientContext &context, TableFunctionBindInput &input,
   return std::move(bind_data);
 }
 
-void Bigtable2Function(ClientContext &context, TableFunctionInput &data,
-                       DataChunk &output) {
+void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
   auto &state = (Bigtable2FunctionData &)*data.bind_data;
 
   if (state.prefix_idx == state.prefix_count) {
