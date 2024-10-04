@@ -23,8 +23,7 @@ struct Bigtable2FunctionData : TableFunctionData {
   shared_ptr<Table> table;
 };
 
-static unique_ptr<FunctionData>
-Bigtable2FunctionBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types, vector<string> &names) {
+static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types, vector<string> &names) {
   names.emplace_back("pe_id");
   return_types.emplace_back(LogicalType::UBIGINT);
   names.emplace_back("date");
