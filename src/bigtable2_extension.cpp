@@ -81,7 +81,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
   auto range = cbt::RowRange::Prefix(state.prefixes[state.prefix_idx++]);
   auto filter = Filter::PassAllFilter();
 
-  for (StatusOr<cbt::Row> &row : state.table->ReadRows(range, 100, filter)) {
+  for (StatusOr<cbt::Row> &row : state.table->ReadRows(range, 50, filter)) {
     if (!row) throw std::move(row).status();
 
     auto row_key = row.value().row_key();
