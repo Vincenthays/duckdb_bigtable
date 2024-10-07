@@ -9,6 +9,7 @@
 using ::google::cloud::StatusOr;
 using google::cloud::bigtable::Filter;
 using google::cloud::bigtable::MakeDataClient;
+using google::cloud::bigtable::RowReader;
 using google::cloud::bigtable::Table;
 
 namespace cbt = ::google::cloud::bigtable;
@@ -19,11 +20,18 @@ struct Bigtable2FunctionData : TableFunctionData {
   idx_t row_idx = 0;
   idx_t prefix_idx = 0;
   idx_t prefix_count;
-  vector<string> prefixes;
+  vector<string> prefixes_start;
+  vector<string> prefixes_end;
+
   shared_ptr<Table> table;
 };
 
-static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types, vector<string> &names) {
+static unique_ptr<FunctionData> Bigtable2FunctionBind(
+  ClientContext &context, 
+  TableFunctionBindInput &input,
+  vector<LogicalType> &return_types,
+  vector<string> &names
+) {
   names.emplace_back("pe_id");
   return_types.emplace_back(LogicalType::UBIGINT);
   names.emplace_back("date");
@@ -50,33 +58,36 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
   auto bind_data = make_uniq<Bigtable2FunctionData>();
 
   auto data_client = MakeDataClient("dataimpact-processing", "processing");
-  auto table = make_shared_ptr<Table>(data_client, "product");
-  bind_data->table = table;
+  bind_data->table = make_shared_ptr<Table>(data_client, "product");
 
   auto ls_pe_id = ListValue::GetChildren(input.inputs[0]);
+  bind_data->prefix_count = ls_pe_id.size();
+
   for (auto &pe_id : ls_pe_id) {
     string prefix_id = StringValue::Get(pe_id);
     reverse(prefix_id.begin(), prefix_id.end());
-    prefix_id += "/";
-    bind_data->prefixes.emplace_back(std::move(prefix_id));
+    bind_data->prefixes_start.emplace_back(prefix_id + "/202424/");
+    bind_data->prefixes_end.emplace_back(prefix_id + "/2024240");
   }
-  bind_data->prefix_count = bind_data->prefixes.size();
-
+  
   return std::move(bind_data);
 }
 
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
   auto &state = (Bigtable2FunctionData &)*data.bind_data;
 
-  if (state.prefix_idx == state.prefix_count) {
-    output.SetCardinality(0);
-    return;
-  }
-
   idx_t cardinality = 0;
 
-  auto range = cbt::RowRange::Prefix(state.prefixes[state.prefix_idx++]);
+  auto range = cbt::RowRange::Range(
+    state.prefixes_start[state.prefix_idx], 
+    state.prefixes_end[state.prefix_idx]
+  );
   auto filter = Filter::PassAllFilter();
+
+  if (++state.prefix_idx == state.prefix_count) {
+    output.SetCardinality(cardinality);
+    return;
+  }
 
   for (StatusOr<cbt::Row> &row : state.table->ReadRows(range, 50, filter)) {
     if (!row) throw std::move(row).status();
@@ -91,16 +102,16 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     uint64_t pe_id = std::stoul(prefix_id);
     uint32_t shop_id = std::stoul(row_key.substr(index_2 + 1));
 
-    bool arr_mask[7];
-    Value arr_date[7];
-    Value arr_price[7];
-    Value arr_base_price[7];
-    Value arr_unit_price[7];
-    // Value arr_promo_id[7];
-    // Value arr_promo_text[7];
-    // vector<Value> arr_shelf[7];
-    // vector<Value> arr_position[7];
-    // vector<Value> arr_is_paid[7];
+    std::array<bool, 7> arr_mask;
+    std::array<Value, 7> arr_date;
+    std::array<Value, 7> arr_price;
+    std::array<Value, 7> arr_base_price;
+    std::array<Value, 7> arr_unit_price;
+    // std::array<Value, 7> arr_promo_id;
+    // std::array<Value, 7> arr_promo_text;
+    // std::array<vector<Value>, 7> arr_shelf;
+    // std::array<vector<Value>, 7> arr_position;
+    // std::array<vector<Value>, 7> arr_is_paid;
 
     for (int i = 0; i < 7; i++) {
       arr_mask[i] = false;
@@ -132,7 +143,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         // arr_promo_id[weekday] = std::stoi(cell.column_qualifier());
         // arr_promo_text[weekday] = cell.value();
         break;
-      case 's': case 'S':
+      case 's':
+      case 'S':
         // arr_shelf[weekday].emplace_back(cell.column_qualifier());
         // arr_position[weekday].emplace_back(std::stoi(cell.value()));
         // arr_is_paid[weekday].emplace_back(cell.family_name().at(0) == 'S');
@@ -142,7 +154,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
     for (int i = 0; i < 7; i++) {
       if (!arr_mask[i]) continue;
-    
+
       output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
       output.SetValue(1, state.row_idx, arr_date[i]);
       output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
