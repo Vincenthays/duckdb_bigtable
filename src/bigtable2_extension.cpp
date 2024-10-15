@@ -89,14 +89,6 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     return;
   }
 
-  std::cout 
-    << state.prefixes_start[state.prefix_idx] 
-    << " - " 
-    << state.prefixes_end[state.prefix_idx] 
-    << " - "
-    << state.row_idx
-    << std::endl;
-
   for (StatusOr<cbt::Row> &row : state.table->ReadRows(range, filter)) {
     if (!row) throw std::move(row).status();
 
@@ -182,6 +174,14 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       state.row_idx++;
     }
   }
+
+  std::cout 
+    << state.prefixes_start[state.prefix_idx] 
+    << " - " 
+    << state.prefixes_end[state.prefix_idx] 
+    << " - "
+    << state.row_idx
+    << std::endl;
 
   output.SetCardinality(cardinality);
 }
