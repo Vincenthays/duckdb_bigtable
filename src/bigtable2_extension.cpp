@@ -102,6 +102,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     uint64_t pe_id = std::stoul(prefix_id);
     uint32_t shop_id = std::stoul(row_key.substr(index_2 + 1));
 
+    std::cout << pe_id << std::endl;
+
     std::array<bool, 7> arr_mask;
     std::array<Value, 7> arr_date;
     std::array<Value, 7> arr_price;
