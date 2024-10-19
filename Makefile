@@ -1,4 +1,3 @@
-BUILD_PARQUET=0
 PROJ_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 # Configuration of extension
