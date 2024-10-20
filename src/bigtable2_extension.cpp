@@ -44,10 +44,10 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   return_types.emplace_back(LogicalType::FLOAT);
   names.emplace_back("unit_price");
   return_types.emplace_back(LogicalType::FLOAT);
-  // names.emplace_back("promo_id");
-  // return_types.emplace_back(LogicalType::UINTEGER);
-  // names.emplace_back("promo_text");
-  // return_types.emplace_back(LogicalType::VARCHAR);
+  names.emplace_back("promo_id");
+  return_types.emplace_back(LogicalType::UINTEGER);
+  names.emplace_back("promo_text");
+  return_types.emplace_back(LogicalType::VARCHAR);
   // names.emplace_back("shelf");
   // return_types.emplace_back(LogicalType::LIST(LogicalType::VARCHAR));
   // names.emplace_back("position");
@@ -109,11 +109,11 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     std::array<Value, 7> arr_price;
     std::array<Value, 7> arr_base_price;
     std::array<Value, 7> arr_unit_price;
-    // std::array<Value, 7> arr_promo_id;
-    // std::array<Value, 7> arr_promo_text;
-    // std::array<vector<Value>, 7> arr_shelf;
-    // std::array<vector<Value>, 7> arr_position;
-    // std::array<vector<Value>, 7> arr_is_paid;
+    std::array<Value, 7> arr_promo_id;
+    std::array<Value, 7> arr_promo_text;
+    std::array<vector<Value>, 7> arr_shelf;
+    std::array<vector<Value>, 7> arr_position;
+    std::array<vector<Value>, 7> arr_is_paid;
 
     for (int i = 0; i < 7; i++) {
       arr_mask[i] = false;
@@ -142,14 +142,14 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
         }
         break;
       case 'd':
-        // arr_promo_id[weekday] = std::stoi(cell.column_qualifier());
-        // arr_promo_text[weekday] = cell.value();
+        arr_promo_id[weekday] = std::stoi(cell.column_qualifier());
+        arr_promo_text[weekday] = cell.value();
         break;
       case 's':
       case 'S':
-        // arr_shelf[weekday].emplace_back(cell.column_qualifier());
-        // arr_position[weekday].emplace_back(std::stoi(cell.value()));
-        // arr_is_paid[weekday].emplace_back(cell.family_name().at(0) == 'S');
+        arr_shelf[weekday].emplace_back(cell.column_qualifier());
+        arr_position[weekday].emplace_back(std::stoi(cell.value()));
+        arr_is_paid[weekday].emplace_back(cell.family_name().at(0) == 'S');
         break;
       }
     }
@@ -163,8 +163,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       output.SetValue(3, state.row_idx, arr_price[i]);
       output.SetValue(4, state.row_idx, arr_base_price[i]);
       output.SetValue(5, state.row_idx, arr_unit_price[i]);
-      // output.SetValue(6, state.row_idx, arr_promo_id[i]);
-      // output.SetValue(7, state.row_idx, arr_promo_text[i]);
+      output.SetValue(6, state.row_idx, arr_promo_id[i]);
+      output.SetValue(7, state.row_idx, arr_promo_text[i]);
 
       // if (!arr_shelf[i].empty()) {
       //   output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
