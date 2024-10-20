@@ -48,12 +48,12 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   return_types.emplace_back(LogicalType::UINTEGER);
   names.emplace_back("promo_text");
   return_types.emplace_back(LogicalType::VARCHAR);
-  // names.emplace_back("shelf");
-  // return_types.emplace_back(LogicalType::LIST(LogicalType::VARCHAR));
-  // names.emplace_back("position");
-  // return_types.emplace_back(LogicalType::LIST(LogicalType::UINTEGER));
-  // names.emplace_back("is_paid");
-  // return_types.emplace_back(LogicalType::LIST(LogicalType::BOOLEAN));
+  names.emplace_back("shelf");
+  return_types.emplace_back(LogicalType::LIST(LogicalType::VARCHAR));
+  names.emplace_back("position");
+  return_types.emplace_back(LogicalType::LIST(LogicalType::UINTEGER));
+  names.emplace_back("is_paid");
+  return_types.emplace_back(LogicalType::LIST(LogicalType::BOOLEAN));
 
   auto bind_data = make_uniq<Bigtable2FunctionData>();
 
@@ -166,11 +166,11 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       output.SetValue(6, state.row_idx, arr_promo_id[i]);
       output.SetValue(7, state.row_idx, arr_promo_text[i]);
 
-      // if (!arr_shelf[i].empty()) {
-      //   output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
-      //   output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
-      //   output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
-      // }
+      if (!arr_shelf[i].empty()) {
+        output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
+        output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
+        output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
+      }
 
       cardinality++;
       state.row_idx++;
