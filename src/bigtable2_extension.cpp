@@ -34,12 +34,14 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
 ) {
   // Define output column names and types
   names = {"pe_id", "date", "shop_id", "price", "base_price", "unit_price", 
-           "promo_id", "promo_text", "shelf", "position", "is_paid"};
+           "promo_id", 
+           // "promo_text", "shelf", 
+           "position", "is_paid"};
 
   return_types = {LogicalType::UBIGINT, LogicalType::DATE, LogicalType::UINTEGER, 
                   LogicalType::FLOAT, LogicalType::FLOAT, LogicalType::FLOAT,
-                  LogicalType::UINTEGER, LogicalType::VARCHAR, 
-                  LogicalType::LIST(LogicalType::VARCHAR),
+                  LogicalType::UINTEGER, 
+                  // LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR),
                   LogicalType::LIST(LogicalType::UINTEGER),
                   LogicalType::LIST(LogicalType::BOOLEAN)};
 
@@ -151,13 +153,13 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       output.SetValue(4, state.row_idx, arr_base_price[i]);
       output.SetValue(5, state.row_idx, arr_unit_price[i]);
       output.SetValue(6, state.row_idx, arr_promo_id[i]);
-      output.SetValue(7, state.row_idx, arr_promo_text[i]);
+      // output.SetValue(7, state.row_idx, arr_promo_text[i]);
 
       // Set LIST values if available
       if (!arr_shelf[i].empty()) {
-        output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
-        output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
-        output.SetValue(10, state.row_idx, Value::LIST(arr_is_paid[i]));
+        // output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
+        output.SetValue(7, state.row_idx, Value::LIST(arr_position[i]));
+        output.SetValue(8, state.row_idx, Value::LIST(arr_is_paid[i]));
       }
 
       cardinality++;
