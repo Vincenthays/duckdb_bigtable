@@ -32,28 +32,16 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   vector<LogicalType> &return_types,
   vector<string> &names
 ) {
-  names.emplace_back("pe_id");
-  return_types.emplace_back(LogicalType::UBIGINT);
-  names.emplace_back("date");
-  return_types.emplace_back(LogicalType::DATE);
-  names.emplace_back("shop_id");
-  return_types.emplace_back(LogicalType::UINTEGER);
-  names.emplace_back("price");
-  return_types.emplace_back(LogicalType::FLOAT);
-  names.emplace_back("base_price");
-  return_types.emplace_back(LogicalType::FLOAT);
-  names.emplace_back("unit_price");
-  return_types.emplace_back(LogicalType::FLOAT);
-  names.emplace_back("promo_id");
-  return_types.emplace_back(LogicalType::UINTEGER);
-  names.emplace_back("promo_text");
-  return_types.emplace_back(LogicalType::VARCHAR);
-  names.emplace_back("shelf");
-  return_types.emplace_back(LogicalType::LIST(LogicalType::VARCHAR));
-  names.emplace_back("position");
-  return_types.emplace_back(LogicalType::LIST(LogicalType::UINTEGER));
-  names.emplace_back("is_paid");
-  return_types.emplace_back(LogicalType::LIST(LogicalType::BOOLEAN));
+  // Define output column names and types
+  names = {"pe_id", "date", "shop_id", "price", "base_price", "unit_price", 
+           "promo_id", "promo_text", "shelf", "position", "is_paid"};
+
+  return_types = {LogicalType::UBIGINT, LogicalType::DATE, LogicalType::UINTEGER, 
+                  LogicalType::FLOAT, LogicalType::FLOAT, LogicalType::FLOAT,
+                  LogicalType::UINTEGER, LogicalType::VARCHAR, 
+                  LogicalType::LIST(LogicalType::VARCHAR),
+                  LogicalType::LIST(LogicalType::UINTEGER),
+                  LogicalType::LIST(LogicalType::BOOLEAN)};
 
   auto bind_data = make_uniq<Bigtable2FunctionData>();
 
@@ -63,13 +51,13 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   auto ls_pe_id = ListValue::GetChildren(input.inputs[0]);
   bind_data->prefix_count = ls_pe_id.size();
 
-  for (auto &pe_id : ls_pe_id) {
+  for (const auto &pe_id : ls_pe_id) {
     string prefix_id = StringValue::Get(pe_id);
     reverse(prefix_id.begin(), prefix_id.end());
     bind_data->prefixes_start.emplace_back(prefix_id + "/202424/");
     bind_data->prefixes_end.emplace_back(prefix_id + "/2024240");
   }
-  
+
   return std::move(bind_data);
 }
 
@@ -78,83 +66,82 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
   idx_t cardinality = 0;
 
+  // Check if all prefixes have been processed
+  if (state.prefix_idx >= state.prefix_count) {
+    output.SetCardinality(0);
+    return;
+  }
+
+  // Define range and filter for Bigtable query
   auto range = cbt::RowRange::Range(
     state.prefixes_start[state.prefix_idx], 
     state.prefixes_end[state.prefix_idx]
   );
   auto filter = Filter::PassAllFilter();
+  state.prefix_idx++;  // Move to next prefix for next invocation
 
-  if (++state.prefix_idx == state.prefix_count) {
-    output.SetCardinality(cardinality);
-    return;
-  }
+  // Process each row in the result set
+  for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, filter)) {
+    if (!row_result) {
+      throw std::runtime_error(row_result.status().message());
+    }
 
-  for (StatusOr<cbt::Row> &row : state.table->ReadRows(range, filter)) {
-    if (!row) throw std::move(row).status();
-
-    auto row_key = row.value().row_key();
+    const auto &row = row_result.value();
+    const auto &row_key = row.row_key();
     auto index_1 = row_key.find_first_of('/');
     auto index_2 = row_key.find_last_of('/');
 
+    // Extract and reverse prefix_id, parse pe_id and shop_id
     string prefix_id = row_key.substr(0, index_1);
     reverse(prefix_id.begin(), prefix_id.end());
-
-    uint64_t pe_id = std::stoul(prefix_id);
+    uint64_t pe_id = std::stoull(prefix_id);
     uint32_t shop_id = std::stoul(row_key.substr(index_2 + 1));
 
-    std::cout << pe_id << std::endl;
+    // Arrays to hold cell data for each day (7 days)
+    std::array<bool, 7> arr_mask = {false};
+    std::array<Value, 7> arr_date, arr_price, arr_base_price, arr_unit_price, arr_promo_id, arr_promo_text;
+    std::array<vector<Value>, 7> arr_shelf, arr_position, arr_is_paid;
 
-    std::array<bool, 7> arr_mask;
-    std::array<Value, 7> arr_date;
-    std::array<Value, 7> arr_price;
-    std::array<Value, 7> arr_base_price;
-    std::array<Value, 7> arr_unit_price;
-    std::array<Value, 7> arr_promo_id;
-    std::array<Value, 7> arr_promo_text;
-    std::array<vector<Value>, 7> arr_shelf;
-    std::array<vector<Value>, 7> arr_position;
-    std::array<vector<Value>, 7> arr_is_paid;
-
-    for (int i = 0; i < 7; i++) {
-      arr_mask[i] = false;
-    }
-
-    for (auto &cell : row.value().cells()) {
-
+    // Iterate over each cell in the row
+    for (const auto &cell : row.cells()) {
+      // Convert timestamp to date and get weekday (0-based index for Mon-Sun)
       date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
       int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
-
-      arr_mask[weekday] = true;
+      arr_mask[weekday] = true;  // Mark day as having valid data
       arr_date[weekday] = Value::DATE(date);
 
-      switch (cell.family_name().at(0)) {
-      case 'p':
-        switch (cell.column_qualifier().at(0)) {
-        case 'p':
-          arr_price[weekday] = std::stod(cell.value());
+      // Process data based on column family and qualifier
+      switch (cell.family_name()[0]) {
+        case 'p':  // Price-related data
+          switch (cell.column_qualifier()[0]) {
+            case 'p':
+              arr_price[weekday] = Value(std::stod(cell.value()));
+              break;
+            case 'b':
+              arr_base_price[weekday] = Value(std::stod(cell.value()));
+              break;
+            case 'u':
+              arr_unit_price[weekday] = Value(std::stod(cell.value()));
+              break;
+          }
           break;
-        case 'b':
-          arr_base_price[weekday] = std::stod(cell.value());
+
+        case 'd':  // Promo-related data
+          arr_promo_id[weekday] = Value::UINTEGER(std::stoul(cell.column_qualifier()));
+          arr_promo_text[weekday] = Value(cell.value());  // Use Value() constructor for strings
           break;
-        case 'u':
-          arr_unit_price[weekday] = std::stod(cell.value());
+
+        case 's':  // Shelf-related data (unpaid)
+        case 'S':  // Shelf-related data (paid)
+          arr_shelf[weekday].emplace_back(Value(cell.column_qualifier()));  // Use Value() constructor for strings
+          arr_position[weekday].emplace_back(Value::UINTEGER(std::stoul(cell.value())));
+          arr_is_paid[weekday].emplace_back(Value::BOOLEAN(cell.family_name()[0] == 'S'));
           break;
-        }
-        break;
-      case 'd':
-        arr_promo_id[weekday] = std::stoi(cell.column_qualifier());
-        arr_promo_text[weekday] = cell.value();
-        break;
-      case 's':
-      case 'S':
-        arr_shelf[weekday].emplace_back(cell.column_qualifier());
-        arr_position[weekday].emplace_back(std::stoi(cell.value()));
-        arr_is_paid[weekday].emplace_back(cell.family_name().at(0) == 'S');
-        break;
       }
     }
 
-    for (int i = 0; i < 7; i++) {
+    // Set output values for each valid day (Monday-Sunday)
+    for (int i = 0; i < 7; ++i) {
       if (!arr_mask[i]) continue;
 
       output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
@@ -166,6 +153,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       output.SetValue(6, state.row_idx, arr_promo_id[i]);
       output.SetValue(7, state.row_idx, arr_promo_text[i]);
 
+      // Set LIST values if available
       if (!arr_shelf[i].empty()) {
         output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
         output.SetValue(9, state.row_idx, Value::LIST(arr_position[i]));
@@ -177,13 +165,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     }
   }
 
-  std::cout 
-    << state.prefixes_start[state.prefix_idx] 
-    << " - " 
-    << state.prefixes_end[state.prefix_idx] 
-    << " - "
-    << state.row_idx
-    << std::endl;
+  std::cout << "Processed prefix: " << state.prefixes_start[state.prefix_idx - 1]
+            << " - " << state.row_idx << " rows processed." << std::endl;
 
   output.SetCardinality(cardinality);
 }
