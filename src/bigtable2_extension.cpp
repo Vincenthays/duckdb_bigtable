@@ -83,7 +83,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
   state.prefix_idx++;  // Move to next prefix for next invocation
 
   // Process each row in the result set
-  for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, filter)) {
+  for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, 300, filter)) {
     if (!row_result) {
       throw std::runtime_error(row_result.status().message());
     }
