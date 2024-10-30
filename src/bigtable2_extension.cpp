@@ -36,14 +36,16 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   names = {"pe_id", "date", "shop_id", "price", "base_price", "unit_price", 
            "promo_id", 
            // "promo_text", "shelf", 
-           "position", "is_paid"};
+           // "position", "is_paid"
+           };
 
   return_types = {LogicalType::UBIGINT, LogicalType::DATE, LogicalType::UINTEGER, 
                   LogicalType::FLOAT, LogicalType::FLOAT, LogicalType::FLOAT,
                   LogicalType::UINTEGER, 
                   // LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR),
-                  LogicalType::LIST(LogicalType::UINTEGER),
-                  LogicalType::LIST(LogicalType::BOOLEAN)};
+                  // LogicalType::LIST(LogicalType::UINTEGER),
+                  // LogicalType::LIST(LogicalType::BOOLEAN)
+                  };
 
   auto bind_data = make_uniq<Bigtable2FunctionData>();
 
@@ -90,14 +92,14 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
     const auto &row = row_result.value();
     const auto &row_key = row.row_key();
-    auto index_1 = row_key.find_first_of('/');
-    auto index_2 = row_key.find_last_of('/');
+    const auto index_1 = row_key.find_first_of('/');
+    const auto index_2 = row_key.find_last_of('/');
 
     // Extract and reverse prefix_id, parse pe_id and shop_id
     string prefix_id = row_key.substr(0, index_1);
     reverse(prefix_id.begin(), prefix_id.end());
-    uint64_t pe_id = std::stoull(prefix_id);
-    uint32_t shop_id = std::stoul(row_key.substr(index_2 + 1));
+    const uint64_t pe_id = std::stoull(prefix_id);
+    const uint32_t shop_id = std::stoul(row_key.substr(index_2 + 1));
 
     // Arrays to hold cell data for each day (7 days)
     std::array<bool, 7> arr_mask = {false};
@@ -158,8 +160,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       // Set LIST values if available
       if (!arr_shelf[i].empty()) {
         // output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
-        output.SetValue(7, state.row_idx, Value::LIST(arr_position[i]));
-        output.SetValue(8, state.row_idx, Value::LIST(arr_is_paid[i]));
+        // output.SetValue(7, state.row_idx, Value::LIST(arr_position[i]));
+        // output.SetValue(8, state.row_idx, Value::LIST(arr_is_paid[i]));
       }
 
       cardinality++;
