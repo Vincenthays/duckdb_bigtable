@@ -98,8 +98,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     // Extract and reverse prefix_id, parse pe_id and shop_id
     string prefix_id = row_key.substr(0, index_1);
     reverse(prefix_id.begin(), prefix_id.end());
-    const uint64_t pe_id = std::stoull(prefix_id);
-    const uint32_t shop_id = std::stoul(row_key.substr(index_2 + 1));
+    const auto pe_id = Value::UBIGINT(std::stoull(prefix_id));
+    const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
 
     // Arrays to hold cell data for each day (7 days)
     std::array<bool, 7> arr_mask = {false};
@@ -148,9 +148,9 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     for (int i = 0; i < 7; ++i) {
       if (!arr_mask[i]) continue;
 
-      output.SetValue(0, state.row_idx, Value::UBIGINT(pe_id));
+      output.SetValue(0, state.row_idx, pe_id);
       output.SetValue(1, state.row_idx, arr_date[i]);
-      output.SetValue(2, state.row_idx, Value::UINTEGER(shop_id));
+      output.SetValue(2, state.row_idx, shop_id);
       output.SetValue(3, state.row_idx, arr_price[i]);
       output.SetValue(4, state.row_idx, arr_base_price[i]);
       output.SetValue(5, state.row_idx, arr_unit_price[i]);
