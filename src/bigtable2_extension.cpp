@@ -90,7 +90,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
   auto filter = Filter::PassAllFilter();
 
   // Process each row in the result set
-  for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, 300, filter)) {
+  for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, filter)) {
     if (!row_result) {
       throw std::runtime_error(row_result.status().message());
     }
