@@ -31,7 +31,6 @@ struct DayData {
 };
 
 struct Bigtable2FunctionData : TableFunctionData {
-  idx_t row_idx = 0;
   idx_t prefix_idx = 0;
   idx_t prefix_count;
   vector<string> prefixes;
