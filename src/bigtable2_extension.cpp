@@ -16,12 +16,25 @@ namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
+// Structure to hold intermediate data for each day of the week
+struct DayData {
+  bool valid = false;
+  Value date;
+  Value price;
+  Value base_price;
+  Value unit_price;
+  Value promo_id;
+  Value promo_text;
+  vector<Value> shelf;
+  vector<Value> position;
+  vector<Value> is_paid;
+};
+
 struct Bigtable2FunctionData : TableFunctionData {
   idx_t row_idx = 0;
   idx_t prefix_idx = 0;
   idx_t prefix_count;
-  vector<string> prefixes_start;
-  vector<string> prefixes_end;
+  vector<string> prefixes;
 
   shared_ptr<Table> table;
 };
@@ -34,32 +47,28 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
 ) {
   // Define output column names and types
   names = {"pe_id", "date", "shop_id", "price", "base_price", "unit_price", 
-           "promo_id", 
-           // "promo_text", "shelf", 
-           // "position", "is_paid"
-           };
+           "promo_id", "promo_text", "shelf", "position", "is_paid"};
 
   return_types = {LogicalType::UBIGINT, LogicalType::DATE, LogicalType::UINTEGER, 
                   LogicalType::FLOAT, LogicalType::FLOAT, LogicalType::FLOAT,
-                  LogicalType::UINTEGER, 
-                  // LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR),
-                  // LogicalType::LIST(LogicalType::UINTEGER),
-                  // LogicalType::LIST(LogicalType::BOOLEAN)
-                  };
+                  LogicalType::UINTEGER, LogicalType::VARCHAR, 
+                  LogicalType::LIST(LogicalType::VARCHAR),
+                  LogicalType::LIST(LogicalType::UINTEGER),
+                  LogicalType::LIST(LogicalType::BOOLEAN)};
 
   auto bind_data = make_uniq<Bigtable2FunctionData>();
 
+  // Connect to Bigtable
   auto data_client = MakeDataClient("dataimpact-processing", "processing");
   bind_data->table = make_shared_ptr<Table>(data_client, "product");
 
+  // Extract and process pe_id prefixes
   auto ls_pe_id = ListValue::GetChildren(input.inputs[0]);
   bind_data->prefix_count = ls_pe_id.size();
-
   for (const auto &pe_id : ls_pe_id) {
     string prefix_id = StringValue::Get(pe_id);
     reverse(prefix_id.begin(), prefix_id.end());
-    bind_data->prefixes_start.emplace_back(prefix_id + "/202424/");
-    bind_data->prefixes_end.emplace_back(prefix_id + "/2024240");
+    bind_data->prefixes.emplace_back(prefix_id + "/202424"); // Assuming consistent date prefix
   }
 
   return std::move(bind_data);
@@ -76,13 +85,9 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     return;
   }
 
-  // Define range and filter for Bigtable query
-  auto range = cbt::RowRange::Range(
-    state.prefixes_start[state.prefix_idx], 
-    state.prefixes_end[state.prefix_idx]
-  );
+  // Define range for Bigtable query (using prefix for efficiency)
+  auto range = cbt::RowRange::Prefix(state.prefixes[state.prefix_idx]);
   auto filter = Filter::PassAllFilter();
-  state.prefix_idx++;  // Move to next prefix for next invocation
 
   // Process each row in the result set
   for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, 300, filter)) {
@@ -92,91 +97,79 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
     const auto &row = row_result.value();
     const auto &row_key = row.row_key();
+
+    // Extract pe_id and shop_id from row key
     const auto index_1 = row_key.find_first_of('/');
     const auto index_2 = row_key.find_last_of('/');
-
-    // Extract and reverse prefix_id, parse pe_id and shop_id
     string prefix_id = row_key.substr(0, index_1);
     reverse(prefix_id.begin(), prefix_id.end());
     const auto pe_id = Value::UBIGINT(std::stoull(prefix_id));
     const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
 
-    // Arrays to hold cell data for each day (7 days)
-    std::array<bool, 7> arr_mask = {false};
-    std::array<Value, 7> arr_date, arr_price, arr_base_price, arr_unit_price, arr_promo_id, arr_promo_text;
-    std::array<vector<Value>, 7> arr_shelf, arr_position, arr_is_paid;
+    // Array to hold data for each day of the week
+    std::array<DayData, 7> day_data;
 
     // Iterate over each cell in the row
     for (const auto &cell : row.cells()) {
-      // Convert timestamp to date and get weekday (0-based index for Mon-Sun)
+      // Convert timestamp to date and get weekday index (0-based, Mon-Sun)
       date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
       int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
-      arr_mask[weekday] = true;  // Mark day as having valid data
-      arr_date[weekday] = Value::DATE(date);
+
+      // Get reference to DayData for the current weekday
+      auto &current_day = day_data[weekday];
+      current_day.valid = true;
+      current_day.date = Value::DATE(date);
 
       // Process data based on column family and qualifier
       switch (cell.family_name()[0]) {
-        case 'p':  // Price-related data
+        case 'p': // Price data
           switch (cell.column_qualifier()[0]) {
-            case 'p':
-              arr_price[weekday] = Value(std::stod(cell.value()));
-              break;
-            case 'b':
-              arr_base_price[weekday] = Value(std::stod(cell.value()));
-              break;
-            case 'u':
-              arr_unit_price[weekday] = Value(std::stod(cell.value()));
-              break;
+            case 'p': current_day.price = Value(std::stod(cell.value())); break;
+            case 'b': current_day.base_price = Value(std::stod(cell.value())); break;
+            case 'u': current_day.unit_price = Value(std::stod(cell.value())); break;
           }
           break;
-
-        case 'd':  // Promo-related data
-          arr_promo_id[weekday] = Value::UINTEGER(std::stoul(cell.column_qualifier()));
-          arr_promo_text[weekday] = Value(cell.value());  // Use Value() constructor for strings
+        case 'd': // Promo data
+          current_day.promo_id = Value::UINTEGER(std::stoul(cell.column_qualifier()));
+          current_day.promo_text = Value(cell.value()); 
           break;
-
-        case 's':  // Shelf-related data (unpaid)
-        case 'S':  // Shelf-related data (paid)
-          arr_shelf[weekday].emplace_back(Value(cell.column_qualifier()));  // Use Value() constructor for strings
-          arr_position[weekday].emplace_back(Value::UINTEGER(std::stoul(cell.value())));
-          arr_is_paid[weekday].emplace_back(Value::BOOLEAN(cell.family_name()[0] == 'S'));
+        case 's': // Shelf data (unpaid)
+        case 'S': // Shelf data (paid)
+          current_day.shelf.emplace_back(Value(cell.column_qualifier()));
+          current_day.position.emplace_back(Value::UINTEGER(std::stoul(cell.value())));
+          current_day.is_paid.emplace_back(Value::BOOLEAN(cell.family_name()[0] == 'S'));
           break;
       }
     }
 
-    // Set output values for each valid day (Monday-Sunday)
-    for (int i = 0; i < 7; ++i) {
-      if (!arr_mask[i]) continue;
+    // Output data for each valid day
+    for (const auto &day : day_data) {
+      if (!day.valid) continue; 
 
-      output.SetValue(0, state.row_idx, pe_id);
-      output.SetValue(1, state.row_idx, arr_date[i]);
-      output.SetValue(2, state.row_idx, shop_id);
-      output.SetValue(3, state.row_idx, arr_price[i]);
-      output.SetValue(4, state.row_idx, arr_base_price[i]);
-      output.SetValue(5, state.row_idx, arr_unit_price[i]);
-      output.SetValue(6, state.row_idx, arr_promo_id[i]);
-      // output.SetValue(7, state.row_idx, arr_promo_text[i]);
-
-      // Set LIST values if available
-      if (!arr_shelf[i].empty()) {
-        // output.SetValue(8, state.row_idx, Value::LIST(arr_shelf[i]));
-        // output.SetValue(7, state.row_idx, Value::LIST(arr_position[i]));
-        // output.SetValue(8, state.row_idx, Value::LIST(arr_is_paid[i]));
-      }
+      output.SetValue(0, cardinality, pe_id);
+      output.SetValue(1, cardinality, day.date);
+      output.SetValue(2, cardinality, shop_id);
+      output.SetValue(3, cardinality, day.price);
+      output.SetValue(4, cardinality, day.base_price);
+      output.SetValue(5, cardinality, day.unit_price);
+      output.SetValue(6, cardinality, day.promo_id);
+      output.SetValue(7, cardinality, day.promo_text);
+      output.SetValue(8, cardinality, Value::LIST(day.shelf));
+      output.SetValue(9, cardinality, Value::LIST(day.position));
+      output.SetValue(10, cardinality, Value::LIST(day.is_paid));
 
       cardinality++;
-      state.row_idx++;
     }
   }
 
-  std::cout << "Processed prefix: " << state.prefixes_start[state.prefix_idx - 1]
-            << " - " << state.row_idx << " rows processed." << std::endl;
-
+  // Move to the next prefix for the next function call
+  state.prefix_idx++; 
   output.SetCardinality(cardinality);
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
-  TableFunction bigtable_function("bigtable2", {LogicalType::LIST(LogicalType::VARCHAR)}, Bigtable2Function, Bigtable2FunctionBind);
+  TableFunction bigtable_function("bigtable2", {LogicalType::LIST(LogicalType::VARCHAR)}, 
+                                   Bigtable2Function, Bigtable2FunctionBind);
   ExtensionUtil::RegisterFunction(*db.instance, bigtable_function);
 }
 
