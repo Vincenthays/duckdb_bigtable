@@ -90,9 +90,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
   // Process each row in the result set
   for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, filter)) {
-    if (!row_result) {
-      throw std::runtime_error(row_result.status().message());
-    }
+    if (!row_result) throw std::runtime_error(row_result.status().message());
 
     const auto &row = row_result.value();
     const auto &row_key = row.row_key();
