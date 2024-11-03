@@ -83,6 +83,7 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
 
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
   auto &state = (Bigtable2FunctionData &)*data.bind_data;
+  const idx_t vector_size = context.GetContext()->GetVectorSize();
 
   idx_t cardinality = 0;
 
@@ -102,7 +103,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
       cardinality++;
 
-      if (cardinality == 2048) break;
+      if (cardinality == vector_size) break;
     }
     
     state.remainder.erase(state.remainder.begin(), state.remainder.begin() + cardinality);
@@ -110,7 +111,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     return;
   }
 
-  // Check if all prefixes have been processed
+  // Check if all ranges have been processed
   if (state.ranges.empty()) {
     output.SetCardinality(0);
     return;
@@ -177,7 +178,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     for (const auto &day : day_data) {
       if (!day.valid) continue;
 
-      if (cardinality == 2048) {
+      if (cardinality == vector_size) {
         state.remainder.emplace_back(day);
         continue;
       }
