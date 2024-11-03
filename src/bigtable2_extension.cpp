@@ -82,10 +82,9 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
 }
 
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
+  idx_t cardinality = 0;
   auto &state = (Bigtable2FunctionData &)*data.bind_data;
   const idx_t vector_size = context.GetContext()->GetVectorSize();
-
-  idx_t cardinality = 0;
 
   if (!state.remainder.empty()) {
     for (const auto &day : state.remainder) {
