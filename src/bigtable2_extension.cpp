@@ -102,7 +102,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
       cardinality++;
 
-      if (cardinality == 2000) break;
+      if (cardinality == 2048) break;
     }
     
     state.remainder.erase(state.remainder.begin(), state.remainder.begin() + cardinality);
@@ -177,7 +177,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     for (const auto &day : day_data) {
       if (!day.valid) continue;
 
-      if (cardinality == 2000) {
+      if (cardinality == 2048) {
         state.remainder.emplace_back(day);
         continue;
       }
