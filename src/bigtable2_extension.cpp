@@ -33,7 +33,8 @@ struct DayData {
 
 struct Bigtable2FunctionData : TableFunctionData {
   shared_ptr<Table> table;
-  vector<string> prefixes;
+  vector<string> prefixes_start;
+  vector<string> prefixes_end;
   vector<DayData> remainder;
 };
 
@@ -65,12 +66,15 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   bind_data->table = make_shared_ptr<Table>(data_client, "product");
 
   // Extract and process parameters
-  auto date = std::to_string(IntegerValue::Get(input.inputs[0]));
-  auto ls_pe_id = ListValue::GetChildren(input.inputs[1]);
+  const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
+  const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
+  
+  auto ls_pe_id = ListValue::GetChildren(input.inputs[2]);
   for (const auto &pe_id : ls_pe_id) {
     string prefix_id = std::to_string(BigIntValue::Get(pe_id));
     reverse(prefix_id.begin(), prefix_id.end());
-    bind_data->prefixes.emplace_back(prefix_id + "/" + date);
+    bind_data->prefixes_start.emplace_back(prefix_id + "/" + week_start + "/");
+    bind_data->prefixes_end.emplace_back(prefix_id + "/" + week_end + "/");
   }
 
   return std::move(bind_data);
@@ -106,16 +110,18 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
   }
 
   // Check if all prefixes have been processed
-  if (state.prefixes.empty()) {
+  if (state.prefixes_start.empty()) {
     output.SetCardinality(0);
     return;
   }
 
-  auto prefix = state.prefixes[0];
-  state.prefixes.erase(state.prefixes.begin());
+  const auto prefix_start = state.prefixes_start[0];
+  const auto prefix_end = state.prefixes_end[0];
+  state.prefixes_start.erase(state.prefixes_start.begin());
+  state.prefixes_end.erase(state.prefixes_end.begin());
 
-  auto range = cbt::RowRange::Prefix(prefix);
-  auto filter = Filter::PassAllFilter();
+  const auto range = cbt::RowRange::Closed(prefix_start, prefix_end);
+  const auto filter = Filter::PassAllFilter();
 
   // Process each row in the result set
   for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, filter)) {
@@ -138,11 +144,11 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     // Iterate over each cell in the row
     for (const auto &cell : row.cells()) {
       // Convert timestamp to date and get weekday index (0-based, Mon-Sun)
-      date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
-      int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
+      const date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
+      const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 
       // Get reference to DayData for the current weekday
-      auto &current_day = day_data[weekday];
+      const auto &current_day = day_data[weekday];
       current_day.valid = true;
       current_day.pe_id = pe_id;
       current_day.shop_id = shop_id;
@@ -199,9 +205,11 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
-  TableFunction bigtable_function(
-    "bigtable2", {LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)}, 
-    Bigtable2Function, Bigtable2FunctionBind);
+  TableFunction bigtable_function("bigtable2", {
+    LogicalType::INTEGER, 
+    LogicalType::INTEGER, 
+    LogicalType::LIST(LogicalType::BIGINT)
+    }, Bigtable2Function, Bigtable2FunctionBind);
   ExtensionUtil::RegisterFunction(*db.instance, bigtable_function);
 }
 
