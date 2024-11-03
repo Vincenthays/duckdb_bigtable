@@ -51,9 +51,14 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   names = {"pe_id", "shop_id", "date", "price", "base_price", "unit_price", 
            "promo_id", "promo_text", "shelf", "position", "is_paid"};
 
-  return_types = {LogicalType::UBIGINT, LogicalType::UINTEGER, LogicalType::DATE,
-                  LogicalType::FLOAT, LogicalType::FLOAT, LogicalType::FLOAT,
-                  LogicalType::UINTEGER, LogicalType::VARCHAR, 
+  return_types = {LogicalType::UBIGINT,
+                  LogicalType::UINTEGER,
+                  LogicalType::DATE,
+                  LogicalType::FLOAT,
+                  LogicalType::FLOAT,
+                  LogicalType::FLOAT,
+                  LogicalType::UINTEGER,
+                  LogicalType::VARCHAR,
                   LogicalType::LIST(LogicalType::VARCHAR),
                   LogicalType::LIST(LogicalType::UINTEGER),
                   LogicalType::LIST(LogicalType::BOOLEAN)};
@@ -194,7 +199,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
   }
 
   // Move to the next prefix for the next function call
-  state.prefix_idx++; 
+  state.prefix_idx++;
   output.SetCardinality(cardinality);
 }
 
