@@ -19,6 +19,8 @@ namespace duckdb {
 // Structure to hold intermediate data for each day of the week
 struct DayData {
   bool valid = false;
+  Value pe_id;
+  Value shop_id;
   Value date;
   Value price;
   Value base_price;
@@ -36,6 +38,7 @@ struct Bigtable2FunctionData : TableFunctionData {
   vector<string> prefixes;
 
   shared_ptr<Table> table;
+  vector<DayData> remainder;
 };
 
 static unique_ptr<FunctionData> Bigtable2FunctionBind(
@@ -45,10 +48,10 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   vector<string> &names
 ) {
   // Define output column names and types
-  names = {"pe_id", "date", "shop_id", "price", "base_price", "unit_price", 
+  names = {"pe_id", "shop_id", "date", "price", "base_price", "unit_price", 
            "promo_id", "promo_text", "shelf", "position", "is_paid"};
 
-  return_types = {LogicalType::UBIGINT, LogicalType::DATE, LogicalType::UINTEGER, 
+  return_types = {LogicalType::UBIGINT, LogicalType::UINTEGER, LogicalType::DATE,
                   LogicalType::FLOAT, LogicalType::FLOAT, LogicalType::FLOAT,
                   LogicalType::UINTEGER, LogicalType::VARCHAR, 
                   LogicalType::LIST(LogicalType::VARCHAR),
@@ -67,7 +70,7 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   for (const auto &pe_id : ls_pe_id) {
     string prefix_id = StringValue::Get(pe_id);
     reverse(prefix_id.begin(), prefix_id.end());
-    bind_data->prefixes.emplace_back(prefix_id + "/202424"); // Assuming consistent date prefix
+    bind_data->prefixes.emplace_back(prefix_id + "/20242"); // Assuming consistent date prefix
   }
 
   return std::move(bind_data);
@@ -77,6 +80,30 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
   auto &state = (Bigtable2FunctionData &)*data.bind_data;
 
   idx_t cardinality = 0;
+
+  if (!state.remainder.empty()) {
+    for (const auto &day : state.remainder) {
+      output.SetValue(0, cardinality, day.pe_id);
+      output.SetValue(1, cardinality, day.shop_id);
+      output.SetValue(2, cardinality, day.date);
+      output.SetValue(3, cardinality, day.price);
+      output.SetValue(4, cardinality, day.base_price);
+      output.SetValue(5, cardinality, day.unit_price);
+      output.SetValue(6, cardinality, day.promo_id);
+      output.SetValue(7, cardinality, day.promo_text);
+      output.SetValue(8, cardinality, Value::LIST(day.shelf));
+      output.SetValue(9, cardinality, Value::LIST(day.position));
+      output.SetValue(10, cardinality, Value::LIST(day.is_paid));
+
+      cardinality++;
+
+      if (cardinality == 2000) break;
+    }
+    
+    state.remainder.erase(state.remainder.begin(), state.remainder.begin() + cardinality);
+    output.SetCardinality(cardinality);
+    return;
+  }
 
   // Check if all prefixes have been processed
   if (state.prefix_idx >= state.prefix_count) {
@@ -115,6 +142,8 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       // Get reference to DayData for the current weekday
       auto &current_day = day_data[weekday];
       current_day.valid = true;
+      current_day.pe_id = pe_id;
+      current_day.shop_id = shop_id;
       current_day.date = Value::DATE(date);
 
       // Process data based on column family and qualifier
@@ -141,11 +170,16 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
     // Output data for each valid day
     for (const auto &day : day_data) {
-      if (!day.valid) continue; 
+      if (!day.valid) continue;
 
-      output.SetValue(0, cardinality, pe_id);
-      output.SetValue(1, cardinality, day.date);
-      output.SetValue(2, cardinality, shop_id);
+      if (cardinality == 2000) {
+        state.remainder.emplace_back(day);
+        continue;
+      }
+
+      output.SetValue(0, cardinality, day.pe_id);
+      output.SetValue(1, cardinality, day.shop_id);
+      output.SetValue(2, cardinality, day.date);
       output.SetValue(3, cardinality, day.price);
       output.SetValue(4, cardinality, day.base_price);
       output.SetValue(5, cardinality, day.unit_price);
