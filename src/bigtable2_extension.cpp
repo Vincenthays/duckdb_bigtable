@@ -113,7 +113,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 
   auto prefix = state.prefixes[0];
   state.prefixes.erase(state.prefixes.begin());
-  
+
   auto range = cbt::RowRange::Prefix(prefix);
   auto filter = Filter::PassAllFilter();
 
