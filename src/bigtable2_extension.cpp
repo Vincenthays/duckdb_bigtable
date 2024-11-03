@@ -68,7 +68,7 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
   const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
   
-  auto ls_pe_id = ListValue::GetChildren(input.inputs[2]);
+  const auto ls_pe_id = ListValue::GetChildren(input.inputs[2]);
   for (const auto &pe_id : ls_pe_id) {
     string prefix_id = std::to_string(BigIntValue::Get(pe_id));
     reverse(prefix_id.begin(), prefix_id.end());
