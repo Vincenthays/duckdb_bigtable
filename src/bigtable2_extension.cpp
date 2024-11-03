@@ -33,11 +33,8 @@ struct DayData {
 };
 
 struct Bigtable2FunctionData : TableFunctionData {
-  idx_t prefix_idx = 0;
-  idx_t prefix_count;
-  vector<string> prefixes;
-
   shared_ptr<Table> table;
+  vector<string> prefixes;
   vector<DayData> remainder;
 };
 
@@ -47,7 +44,6 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   vector<LogicalType> &return_types,
   vector<string> &names
 ) {
-  // Define output column names and types
   names = {"pe_id", "shop_id", "date", "price", "base_price", "unit_price", 
            "promo_id", "promo_text", "shelf", "position", "is_paid"};
 
@@ -71,7 +67,6 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
 
   // Extract and process pe_id prefixes
   auto ls_pe_id = ListValue::GetChildren(input.inputs[0]);
-  bind_data->prefix_count = ls_pe_id.size();
   for (const auto &pe_id : ls_pe_id) {
     string prefix_id = StringValue::Get(pe_id);
     reverse(prefix_id.begin(), prefix_id.end());
@@ -111,13 +106,15 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
   }
 
   // Check if all prefixes have been processed
-  if (state.prefix_idx >= state.prefix_count) {
+  if (state.prefixes.empty()) {
     output.SetCardinality(0);
     return;
   }
 
-  // Define range for Bigtable query (using prefix for efficiency)
-  auto range = cbt::RowRange::Prefix(state.prefixes[state.prefix_idx]);
+  auto prefix = state.prefixes[0];
+  state.prefixes.erase(state.prefixes.begin());
+  
+  auto range = cbt::RowRange::Prefix(prefix);
   auto filter = Filter::PassAllFilter();
 
   // Process each row in the result set
@@ -198,8 +195,6 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     }
   }
 
-  // Move to the next prefix for the next function call
-  state.prefix_idx++;
   output.SetCardinality(cardinality);
 }
 
