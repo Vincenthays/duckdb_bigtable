@@ -16,7 +16,6 @@ namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
-// Structure to hold intermediate data for each day of the week
 struct DayData {
   bool valid = false;
   Value pe_id;
