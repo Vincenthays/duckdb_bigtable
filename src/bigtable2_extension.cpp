@@ -101,7 +101,6 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       output.SetValue(10, cardinality, Value::LIST(day.is_paid));
 
       cardinality++;
-
       if (cardinality == vector_size) break;
     }
     
