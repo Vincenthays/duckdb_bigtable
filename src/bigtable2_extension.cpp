@@ -65,12 +65,13 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   auto data_client = MakeDataClient("dataimpact-processing", "processing");
   bind_data->table = make_shared_ptr<Table>(data_client, "product");
 
-  // Extract and process pe_id prefixes
-  auto ls_pe_id = ListValue::GetChildren(input.inputs[0]);
+  // Extract and process parameters
+  auto date = std::to_string(IntegerValue::Get(input.inputs[0]));
+  auto ls_pe_id = ListValue::GetChildren(input.inputs[1]);
   for (const auto &pe_id : ls_pe_id) {
     string prefix_id = std::to_string(BigIntValue::Get(pe_id));
     reverse(prefix_id.begin(), prefix_id.end());
-    bind_data->prefixes.emplace_back(prefix_id + "/20242"); // Assuming consistent date prefix
+    bind_data->prefixes.emplace_back(prefix_id + "/" + date);
   }
 
   return std::move(bind_data);
@@ -199,8 +200,9 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
-  TableFunction bigtable_function("bigtable2", {LogicalType::LIST(LogicalType::BIGINT)}, 
-                                   Bigtable2Function, Bigtable2FunctionBind);
+  TableFunction bigtable_function(
+    "bigtable2", {LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)}, 
+    Bigtable2Function, Bigtable2FunctionBind);
   ExtensionUtil::RegisterFunction(*db.instance, bigtable_function);
 }
 
