@@ -16,6 +16,8 @@ namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
+const idx_t MAX_VECTOR_SIZE = 2048;
+
 struct DayData {
   bool valid = false;
   Value pe_id;
@@ -84,7 +86,6 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
 void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
   idx_t cardinality = 0;
   auto &state = (Bigtable2FunctionData &)*data.bind_data;
-  const idx_t vector_size = context.GetContext()->GetVectorSize();
 
   if (!state.remainder.empty()) {
     for (const auto &day : state.remainder) {
@@ -101,7 +102,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       output.SetValue(10, cardinality, Value::LIST(day.is_paid));
 
       cardinality++;
-      if (cardinality == vector_size) break;
+      if (cardinality == MAX_VECTOR_SIZE) break;
     }
     
     state.remainder.erase(state.remainder.begin(), state.remainder.begin() + cardinality);
@@ -176,7 +177,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     for (const auto &day : day_data) {
       if (!day.valid) continue;
 
-      if (cardinality == vector_size) {
+      if (cardinality == MAX_VECTOR_SIZE) {
         state.remainder.emplace_back(day);
         continue;
       }
