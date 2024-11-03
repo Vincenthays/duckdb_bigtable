@@ -1,9 +1,10 @@
 {
   "dependencies": [
     {
-      "name": "google-cloud-cpp", 
-      "default-features": false, 
-      "features": ["bigtable"]
+      "name": "google-cloud-cpp",
+      "features": [
+        "bigtable"
+      ]
     }
   ]
 }
