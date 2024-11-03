@@ -33,8 +33,7 @@ struct DayData {
 
 struct Bigtable2FunctionData : TableFunctionData {
   shared_ptr<Table> table;
-  vector<string> prefixes_start;
-  vector<string> prefixes_end;
+  vector<cbt::RowRange> ranges;
   vector<DayData> remainder;
 };
 
@@ -73,8 +72,10 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   for (const auto &pe_id : ls_pe_id) {
     string prefix_id = std::to_string(BigIntValue::Get(pe_id));
     reverse(prefix_id.begin(), prefix_id.end());
-    bind_data->prefixes_start.emplace_back(prefix_id + "/" + week_start + "/");
-    bind_data->prefixes_end.emplace_back(prefix_id + "/" + week_end + "/");
+    bind_data->ranges.emplace_back(cbt::RowRange::Closed(
+      prefix_id + "/" + week_start + "/", 
+      prefix_id + "/" + week_end + "0"
+    ));
   }
 
   return std::move(bind_data);
@@ -110,17 +111,13 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
   }
 
   // Check if all prefixes have been processed
-  if (state.prefixes_start.empty()) {
+  if (state.ranges.empty()) {
     output.SetCardinality(0);
     return;
   }
 
-  const auto prefix_start = state.prefixes_start[0];
-  const auto prefix_end = state.prefixes_end[0];
-  state.prefixes_start.erase(state.prefixes_start.begin());
-  state.prefixes_end.erase(state.prefixes_end.begin());
-
-  const auto range = cbt::RowRange::Closed(prefix_start, prefix_end);
+  const auto range = state.ranges[0];
+  state.ranges.erase(state.ranges.begin());
   const auto filter = Filter::PassAllFilter();
 
   // Process each row in the result set
@@ -148,7 +145,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 
       // Get reference to DayData for the current weekday
-      const auto &current_day = day_data[weekday];
+      auto &current_day = day_data[weekday];
       current_day.valid = true;
       current_day.pe_id = pe_id;
       current_day.shop_id = shop_id;
@@ -205,11 +202,10 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
-  TableFunction bigtable_function("bigtable2", {
-    LogicalType::INTEGER, 
-    LogicalType::INTEGER, 
-    LogicalType::LIST(LogicalType::BIGINT)
-    }, Bigtable2Function, Bigtable2FunctionBind);
+  TableFunction bigtable_function(
+    "bigtable2", 
+    {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)}, 
+    Bigtable2Function, Bigtable2FunctionBind);
   ExtensionUtil::RegisterFunction(*db.instance, bigtable_function);
 }
 
