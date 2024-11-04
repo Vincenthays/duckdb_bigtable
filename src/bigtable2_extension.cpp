@@ -85,6 +85,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
   const auto filter = Filter::PassAllFilter();
   auto &state = (Bigtable2FunctionData &)*data.bind_data;
 
+  // Process each range
   while (!state.ranges.empty()) {
     const auto range = state.ranges[0];
     state.ranges.erase(state.ranges.begin());
