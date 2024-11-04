@@ -144,15 +144,11 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
       }
 
       for (const auto &day : day_data) {
-        if (day.valid) {
-          state.remainder.emplace_back(day);
-        }
+        if (day.valid) state.remainder.emplace_back(day);
       }
     }
 
-    if (!state.remainder.empty()) {
-      break;
-    }
+    if (!state.remainder.empty()) break;
   }
 
   idx_t cardinality = 0;
