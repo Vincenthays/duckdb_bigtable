@@ -26,9 +26,7 @@ struct DayData {
   Value unit_price;
   Value promo_id;
   Value promo_text;
-  vector<Value> shelf;
-  vector<Value> position;
-  vector<Value> is_paid;
+  vector<Value> shelves;
 };
 
 struct Bigtable2FunctionData : TableFunctionData {
@@ -44,7 +42,7 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
   vector<string> &names
 ) {
   names = {"pe_id", "shop_id", "date", "price", "base_price", "unit_price", 
-           "promo_id", "promo_text", "shelf", "position", "is_paid"};
+           "promo_id", "promo_text", "shelves"};
 
   return_types = {LogicalType::UBIGINT,
                   LogicalType::UINTEGER,
@@ -54,9 +52,10 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(
                   LogicalType::FLOAT,
                   LogicalType::UINTEGER,
                   LogicalType::VARCHAR,
-                  LogicalType::LIST(LogicalType::VARCHAR),
-                  LogicalType::LIST(LogicalType::UINTEGER),
-                  LogicalType::LIST(LogicalType::BOOLEAN)};
+                  LogicalType::LIST(LogicalType::STRUCT({
+                    {"shelf", LogicalType::VARCHAR}, 
+                    {"position", LogicalType::UINTEGER}, 
+                    {"is_paid", LogicalType::BOOLEAN}}))};
 
   auto bind_data = make_uniq<Bigtable2FunctionData>();
 
@@ -136,9 +135,10 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
             break;
           case 's': // Shelf data (unpaid)
           case 'S': // Shelf data (paid)
-            current_day.shelf.emplace_back(Value(cell.column_qualifier()));
-            current_day.position.emplace_back(Value::UINTEGER(std::stoul(cell.value())));
-            current_day.is_paid.emplace_back(Value::BOOLEAN(cell.family_name()[0] == 'S'));
+            current_day.shelves.emplace_back(Value::STRUCT({
+              {"shelf", Value(cell.column_qualifier())},
+              {"position", Value::UINTEGER(std::stoul(cell.value()))},
+              {"is_paid", Value::BOOLEAN(cell.family_name()[0] == 'S')}}));
             break;
         }
       }
@@ -162,9 +162,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
     output.SetValue(5, cardinality, day.unit_price);
     output.SetValue(6, cardinality, day.promo_id);
     output.SetValue(7, cardinality, day.promo_text);
-    output.SetValue(8, cardinality, Value::LIST(day.shelf));
-    output.SetValue(9, cardinality, Value::LIST(day.position));
-    output.SetValue(10, cardinality, Value::LIST(day.is_paid));
+    output.SetValue(8, cardinality, Value::LIST(day.shelves));
 
     cardinality++;
     if (cardinality == STANDARD_VECTOR_SIZE) {
