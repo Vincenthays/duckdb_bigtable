@@ -10,4 +10,4 @@ WORKDIR /app
 COPY duckdb src test ./
 RUN make
 
-# gs://<s3_bucket>/<ext_name>/<extension_version>/<duckdb_version>/<architecture>/<ext_name>.duckdb_extension
+# gs://<bucket>/<ext_name>/<extension_version>/<duckdb_version>/<architecture>/<ext_name>.duckdb_extension
