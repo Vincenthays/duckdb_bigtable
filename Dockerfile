@@ -11,3 +11,4 @@ COPY duckdb src test ./
 RUN make
 
 # gs://<bucket>/<ext_name>/<extension_version>/<duckdb_version>/<architecture>/<ext_name>.duckdb_extension
+# https://duckdb.org/docs/extensions/working_with_extensions.html
