@@ -9,3 +9,9 @@ ENV PATH=$PATH:/opt/vcpkg
 WORKDIR /app
 COPY duckdb src test ./
 RUN make
+
+FROM google/cloud-sdk:slim
+
+WORKDIR /app
+COPY --from=0 /app/build/build/release/repository ./
+CMD gsutil -m rsync -r . gs://di_duckdb_extension
