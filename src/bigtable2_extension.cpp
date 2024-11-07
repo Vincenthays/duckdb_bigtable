@@ -39,7 +39,7 @@ struct Keyword {
 	Value position;
 	Value pe_id;
 	Value retailer_p_id;
-	Value is_paid;
+	Value is_paid = false;
 };
 
 struct ProductFunctionData : TableFunctionData {
@@ -96,7 +96,7 @@ static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, Table
                                                    vector<LogicalType> &return_types, vector<string> &names) {
 	names = {"keyword_id", "shop_id", "date", "position", "pe_id", "retailer_p_id", "is_paid"};
 
-	return_types = {LogicalType::UINTEGER, LogicalType::UINTEGER, LogicalType::DATE,   LogicalType::UINTEGER,
+	return_types = {LogicalType::UINTEGER, LogicalType::UINTEGER, LogicalType::TIMESTAMP, LogicalType::UINTEGER,
 	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
 
 	auto bind_data = make_uniq<SearchFunctionData>();
@@ -189,9 +189,9 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 				}
 			}
 
-			for (const auto &day : product_week) {
-				if (day.valid)
-					state.remainder.emplace_back(day);
+			for (const auto &product : product_week) {
+				if (product.valid)
+					state.remainder.emplace_back(product);
 			}
 		}
 
@@ -245,26 +245,48 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			const auto index_2 = row_key.find_last_of('/');
 			string prefix_id = row_key.substr(0, index_1);
 			reverse(prefix_id.begin(), prefix_id.end());
-			const auto keyword_id = Value::UBIGINT(std::stoull(prefix_id));
+			const auto keyword_id = Value::UINTEGER(std::stoull(prefix_id));
 			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
 
 			std::array<Keyword, 200 * 7 * 24> keyword_week;
 
 			for (const auto &cell : row.cells()) {
-				// const date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
+				const int32_t position = std::stoul(cell.column_qualifier());
 
-				// auto &product_day = keyword_week[weekday];
-				// product_day.valid = true;
-				// product_day.keyword_id = keyword_id;
-				// product_day.shop_id = shop_id;
+				if (position > 200 || cell.value().starts_with("id_ret_pos_"))
+					continue;
 
-				switch (cell.family_name()[0]) {}
+				const timestamp_t timestamp = Timestamp::FromEpochMicroSeconds(cell.timestamp().count());
+				const date_t date = Timestamp::GetDate(timestamp);
+				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
+				const int32_t hour = Timestamp::GetTime(timestamp).micros / 3600 / 1000;
+				const int32_t week_hour = weekday * 24 + hour;
+				const int32_t index = 200 * week_hour + position - 1;
+
+				auto &keyword_day = keyword_week[index];
+				keyword_day.valid = true;
+				keyword_day.keyword_id = keyword_id;
+				keyword_day.shop_id = shop_id;
+				keyword_day.date = Value::TIMESTAMP(timestamp);
+				keyword_day.position = Value::UINTEGER(position);
+
+				switch (cell.family_name()[0]) {
+				case 'p':
+					if (cell.value().starts_with("id_ret_"))
+						keyword_day.retailer_p_id = Value(cell.value());
+					else
+						keyword_day.pe_id = Value::UBIGINT(std::stoull(cell.value()));
+					break;
+				case 's':
+					keyword_day.is_paid = Value::BOOLEAN(true);
+					break;
+				}
 			}
 
-			// for (const auto &day : product_week) {
-			// 	if (day.valid)
-			// 		state.remainder.emplace_back(day);
-			// }
+			for (const auto &keyword : keyword_week) {
+				if (keyword.valid)
+					state.remainder.emplace_back(keyword);
+			}
 		}
 
 		if (!state.remainder.empty())
