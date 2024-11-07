@@ -7,6 +7,7 @@ RUN git clone https://github.com/Microsoft/vcpkg.git
 RUN ./vcpkg/bootstrap-vcpkg.sh 
 ENV VCPKG_TOOLCHAIN_PATH=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
 
+RUN apt install -y pkg-config
 WORKDIR /app
 COPY . ./
 RUN make
