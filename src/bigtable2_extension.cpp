@@ -54,9 +54,8 @@ struct SearchFunctionData : TableFunctionData {
 	vector<Keyword> remainder;
 };
 
-static unique_ptr<FunctionData>
-ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types,
-                    vector<string> &names) {
+static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
+                                                    vector<LogicalType> &return_types, vector<string> &names) {
 	names = {"pe_id",    "shop_id",    "date",  "price",    "base_price", "unit_price",
 	         "promo_id", "promo_text", "shelf", "position", "is_paid"};
 
