@@ -16,7 +16,7 @@ namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
-struct DayData {
+struct ProductDay {
 	bool valid = false;
 	Value pe_id;
 	Value shop_id;
@@ -31,13 +31,13 @@ struct DayData {
 	vector<Value> is_paid;
 };
 
-struct Bigtable2FunctionData : TableFunctionData {
+struct ProductFunctionData : TableFunctionData {
 	shared_ptr<Table> table;
 	vector<cbt::RowRange> ranges;
-	vector<DayData> remainder;
+	vector<ProductDay> remainder;
 };
 
-static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
                                                       vector<LogicalType> &return_types, vector<string> &names) {
 	names = {"pe_id",    "shop_id",    "date",  "price",    "base_price", "unit_price",
 	         "promo_id", "promo_text", "shelf", "position", "is_paid"};
@@ -54,7 +54,7 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
 	                LogicalType::LIST(LogicalType::UINTEGER),
 	                LogicalType::LIST(LogicalType::BOOLEAN)};
 
-	auto bind_data = make_uniq<Bigtable2FunctionData>();
+	auto bind_data = make_uniq<ProductFunctionData>();
 
 	// Connect to Bigtable
 	auto data_client = MakeDataClient("dataimpact-processing", "processing");
@@ -75,9 +75,9 @@ static unique_ptr<FunctionData> Bigtable2FunctionBind(ClientContext &context, Ta
 	return std::move(bind_data);
 }
 
-void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
+void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = Filter::PassAllFilter();
-	auto &state = (Bigtable2FunctionData &)*data.bind_data;
+	auto &state = (ProductFunctionData &)*data.bind_data;
 
 	// Process each range
 	while (!state.ranges.empty()) {
@@ -101,7 +101,7 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
 
 			// Array to hold data for each day of the week
-			std::array<DayData, 7> day_data;
+			std::array<ProductDay, 7> product_week;
 
 			// Iterate over each cell in the row
 			for (const auto &cell : row.cells()) {
@@ -109,42 +109,42 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 				const date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
 				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 
-				// Get reference to DayData for the current weekday
-				auto &current_day = day_data[weekday];
-				current_day.valid = true;
-				current_day.pe_id = pe_id;
-				current_day.shop_id = shop_id;
-				current_day.date = Value::DATE(date);
+				// Get reference to Product for the current weekday
+				auto &product_day = product_week[weekday];
+				product_day.valid = true;
+				product_day.pe_id = pe_id;
+				product_day.shop_id = shop_id;
+				product_day.date = Value::DATE(date);
 
 				// Process data based on column family and qualifier
 				switch (cell.family_name()[0]) {
 				case 'p': // Price data
 					switch (cell.column_qualifier()[0]) {
 					case 'p':
-						current_day.price = Value(std::stod(cell.value()));
+						product_day.price = Value(std::stod(cell.value()));
 						break;
 					case 'b':
-						current_day.base_price = Value(std::stod(cell.value()));
+						product_day.base_price = Value(std::stod(cell.value()));
 						break;
 					case 'u':
-						current_day.unit_price = Value(std::stod(cell.value()));
+						product_day.unit_price = Value(std::stod(cell.value()));
 						break;
 					}
 					break;
 				case 'd': // Promo data
-					current_day.promo_id = Value::UINTEGER(std::stoul(cell.column_qualifier()));
-					current_day.promo_text = Value(cell.value());
+					product_day.promo_id = Value::UINTEGER(std::stoul(cell.column_qualifier()));
+					product_day.promo_text = Value(cell.value());
 					break;
 				case 's': // Shelf data (unpaid)
 				case 'S': // Shelf data (paid)
-					current_day.shelf.emplace_back(Value(cell.column_qualifier()));
-					current_day.position.emplace_back(Value::UINTEGER(std::stoul(cell.value())));
-					current_day.is_paid.emplace_back(Value::BOOLEAN(cell.family_name()[0] == 'S'));
+					product_day.shelf.emplace_back(Value(cell.column_qualifier()));
+					product_day.position.emplace_back(Value::UINTEGER(std::stoul(cell.value())));
+					product_day.is_paid.emplace_back(Value::BOOLEAN(cell.family_name()[0] == 'S'));
 					break;
 				}
 			}
 
-			for (const auto &day : day_data) {
+			for (const auto &day : product_week) {
 				if (day.valid)
 					state.remainder.emplace_back(day);
 			}
@@ -182,10 +182,9 @@ void Bigtable2Function(ClientContext &context, TableFunctionInput &data, DataChu
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
-	TableFunction bigtable_function(
-	    "bigtable2", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
-	    Bigtable2Function, Bigtable2FunctionBind);
-	ExtensionUtil::RegisterFunction(*db.instance, bigtable_function);
+	ExtensionUtil::RegisterFunction(*db.instance, TableFunction(
+	    "product", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
+	    ProductFunction, ProductFunctionBind));
 }
 
 std::string Bigtable2Extension::Name() {
