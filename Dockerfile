@@ -13,5 +13,5 @@ RUN make
 FROM google/cloud-sdk:slim
 
 WORKDIR /app
-COPY --from=0 /app/build/build/release/repository/ ./
+COPY --from=0 /app/build/build/release/repository/ /app
 RUN gsutil -m rsync -r . gs://di_duckdb_extension
