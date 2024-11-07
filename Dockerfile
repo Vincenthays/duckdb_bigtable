@@ -7,11 +7,11 @@ RUN /opt/vcpkg/bootstrap-vcpkg.sh
 ENV PATH=$PATH:/opt/vcpkg
 
 WORKDIR /app
-COPY duckdb src test ./
+COPY . ./
 RUN make
 
 FROM google/cloud-sdk:slim
 
 WORKDIR /app
-COPY --from=0 /app/build/build/release/repository/ /app
+COPY --from=0 /app/build/release/repository ./
 RUN gsutil -m rsync -r . gs://di_duckdb_extension
