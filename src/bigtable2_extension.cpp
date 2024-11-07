@@ -16,7 +16,7 @@ namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
-struct ProductDay {
+struct Product {
 	bool valid = false;
 	Value pe_id;
 	Value shop_id;
@@ -31,14 +31,32 @@ struct ProductDay {
 	vector<Value> is_paid;
 };
 
+struct Keyword {
+	bool valid = false;
+	Value keyword_id;
+	Value shop_id;
+	Value date;
+	Value position;
+	Value pe_id;
+	Value retailer_p_id;
+	Value is_paid;
+};
+
 struct ProductFunctionData : TableFunctionData {
 	shared_ptr<Table> table;
 	vector<cbt::RowRange> ranges;
-	vector<ProductDay> remainder;
+	vector<Product> remainder;
 };
 
-static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
-                                                      vector<LogicalType> &return_types, vector<string> &names) {
+struct SearchFunctionData : TableFunctionData {
+	shared_ptr<Table> table;
+	vector<cbt::RowRange> ranges;
+	vector<Keyword> remainder;
+};
+
+static unique_ptr<FunctionData>
+ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types,
+                    vector<string> &names) {
 	names = {"pe_id",    "shop_id",    "date",  "price",    "base_price", "unit_price",
 	         "promo_id", "promo_text", "shelf", "position", "is_paid"};
 
@@ -75,6 +93,34 @@ static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, Tabl
 	return std::move(bind_data);
 }
 
+static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctionBindInput &input,
+                                                   vector<LogicalType> &return_types, vector<string> &names) {
+	names = {"keyword_id", "shop_id", "date", "position", "pe_id", "retailer_p_id", "is_paid"};
+
+	return_types = {LogicalType::UINTEGER, LogicalType::UINTEGER, LogicalType::DATE,   LogicalType::UINTEGER,
+	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
+
+	auto bind_data = make_uniq<SearchFunctionData>();
+
+	// Connect to Bigtable
+	auto data_client = MakeDataClient("dataimpact-processing", "processing");
+	bind_data->table = make_shared_ptr<Table>(data_client, "search");
+
+	// Extract and process parameters
+	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
+	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
+
+	const auto ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
+	for (const auto &keyword_id : ls_keyword_id) {
+		string prefix_id = std::to_string(BigIntValue::Get(keyword_id));
+		reverse(prefix_id.begin(), prefix_id.end());
+		bind_data->ranges.emplace_back(
+		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
+	}
+
+	return std::move(bind_data);
+}
+
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = Filter::PassAllFilter();
 	auto &state = (ProductFunctionData &)*data.bind_data;
@@ -101,7 +147,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
 
 			// Array to hold data for each day of the week
-			std::array<ProductDay, 7> product_week;
+			std::array<Product, 7> product_week;
 
 			// Iterate over each cell in the row
 			for (const auto &cell : row.cells()) {
@@ -181,10 +227,84 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	output.SetCardinality(cardinality);
 }
 
+void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
+	const auto filter = Filter::PassAllFilter();
+	auto &state = (SearchFunctionData &)*data.bind_data;
+
+	while (!state.ranges.empty()) {
+		const auto range = state.ranges[0];
+		state.ranges.erase(state.ranges.begin());
+
+		for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, filter)) {
+			if (!row_result)
+				throw std::runtime_error(row_result.status().message());
+
+			const auto &row = row_result.value();
+			const auto &row_key = row.row_key();
+
+			const auto index_1 = row_key.find_first_of('/');
+			const auto index_2 = row_key.find_last_of('/');
+			string prefix_id = row_key.substr(0, index_1);
+			reverse(prefix_id.begin(), prefix_id.end());
+			const auto keyword_id = Value::UBIGINT(std::stoull(prefix_id));
+			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
+
+			std::array<Keyword, 200 * 7 * 24> keyword_week;
+
+			for (const auto &cell : row.cells()) {
+				// const date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
+
+				// auto &product_day = keyword_week[weekday];
+				// product_day.valid = true;
+				// product_day.keyword_id = keyword_id;
+				// product_day.shop_id = shop_id;
+
+				switch (cell.family_name()[0]) {}
+			}
+
+			// for (const auto &day : product_week) {
+			// 	if (day.valid)
+			// 		state.remainder.emplace_back(day);
+			// }
+		}
+
+		if (!state.remainder.empty())
+			break;
+	}
+
+	idx_t cardinality = 0;
+
+	for (const auto &day : state.remainder) {
+		output.SetValue(0, cardinality, day.keyword_id);
+		output.SetValue(1, cardinality, day.shop_id);
+		output.SetValue(2, cardinality, day.date);
+		output.SetValue(3, cardinality, day.position);
+		output.SetValue(4, cardinality, day.pe_id);
+		output.SetValue(5, cardinality, day.retailer_p_id);
+		output.SetValue(6, cardinality, day.is_paid);
+
+		cardinality++;
+		if (cardinality == STANDARD_VECTOR_SIZE) {
+			state.remainder.erase(state.remainder.begin(), state.remainder.begin() + cardinality);
+			output.SetCardinality(cardinality);
+			return;
+		}
+	}
+
+	state.remainder.clear();
+	output.SetCardinality(cardinality);
+}
+
 void Bigtable2Extension::Load(DuckDB &db) {
-	ExtensionUtil::RegisterFunction(*db.instance, TableFunction(
-	    "product", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
-	    ProductFunction, ProductFunctionBind));
+	ExtensionUtil::RegisterFunction(
+	    *db.instance,
+	    TableFunction("product", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
+	                  ProductFunction, ProductFunctionBind));
+
+	ExtensionUtil::RegisterFunction(
+	    *db.instance,
+	    TableFunction("search", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
+	                  SearchFunction, SearchFunctionBind));
 }
 
 std::string Bigtable2Extension::Name() {
