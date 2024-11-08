@@ -16,4 +16,3 @@ FROM google/cloud-sdk:slim
 WORKDIR /app
 COPY --from=0 /app/build/release/extension/bigtable2/bigtable2.duckdb_extension .
 RUN gzip bigtable2.duckdb_extension
-CMD gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/v1.1.3/linux_amd64/bigtable2.duckdb_extension.gz
