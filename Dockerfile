@@ -8,6 +8,8 @@ RUN ./vcpkg/bootstrap-vcpkg.sh
 ENV VCPKG_TOOLCHAIN_PATH=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
 
 WORKDIR /app
+COPY vcpkg.json ./
+RUN vcpkg install
 COPY . ./
 RUN make
 
