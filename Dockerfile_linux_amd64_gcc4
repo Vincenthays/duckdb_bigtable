@@ -1,13 +1,6 @@
-FROM ubuntu:18.04
+FROM quay.io/pypa/manylinux2014_x86_64
 
-RUN apt update && \
-    apt install -y software-properties-common && \
-    add-apt-repository ppa:ubuntu-toolchain-r/test && \
-    apt update && \
-    apt install -y gcc-4.8 g++-4.8 build-essential cmake git curl zip unzip tar pkg-config
-
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 100
+RUN yum install -y pkg-config gcc-c++
 
 WORKDIR /opt
 RUN git clone https://github.com/Microsoft/vcpkg.git
