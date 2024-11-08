@@ -248,7 +248,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			const auto keyword_id = Value::UINTEGER(std::stoull(prefix_id));
 			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
 
-			std::array<Keyword, 200 * 7 * 24> keyword_week;
+			vector<Keyword> keyword_week(200 * 7 * 24);
 
 			for (const auto &cell : row.cells()) {
 				const int32_t position = std::stoul(cell.column_qualifier());
@@ -260,6 +260,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				const date_t date = Timestamp::GetDate(timestamp);
 				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 				const int32_t hour = Timestamp::GetTime(timestamp).micros / 3600 / 1000;
+				std::cout << hour << std::endl;
 				const int32_t week_hour = weekday * 24 + hour;
 				const int32_t index = 200 * week_hour + position - 1;
 
