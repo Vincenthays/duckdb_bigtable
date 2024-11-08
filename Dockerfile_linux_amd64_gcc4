@@ -1,17 +1,49 @@
 FROM debian:jessie
 
+# Set up archive repositories
 RUN echo "deb http://archive.debian.org/debian/ jessie main" > /etc/apt/sources.list && \
-    echo "deb http://archive.debian.org/debian-security jessie/updates main" >> /etc/apt/sources.list && \
-    apt-get -o Acquire::Check-Valid-Until=false update && \
+    echo "deb http://archive.debian.org/debian-security jessie/updates main" >> /etc/apt/sources.list
+
+# Install base packages
+RUN apt-get -o Acquire::Check-Valid-Until=false update && \
     apt-get install -y --force-yes \
     build-essential \
-    cmake \
-    git \
-    curl \
+    wget \
+    tar \
+    pkg-config \
     zip \
     unzip \
-    tar \
-    pkg-config
+    libssl-dev
+
+# Install newer cmake
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.30.1/cmake-3.30.1-linux-x86_64.tar.gz && \
+    tar xzf cmake-3.30.1-linux-x86_64.tar.gz && \
+    ln -s /cmake-3.30.1-linux-x86_64/bin/cmake /usr/local/bin/cmake && \
+    ln -s /cmake-3.30.1-linux-x86_64/bin/ctest /usr/local/bin/ctest && \
+    ln -s /cmake-3.30.1-linux-x86_64/bin/cpack /usr/local/bin/cpack
+
+# Install newer git
+RUN wget https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.7.4.tar.gz && \
+    tar xzf git-2.7.4.tar.gz && \
+    cd git-2.7.4 && \
+    ./configure --prefix=/usr/local && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf git-2.7.4*
+
+# Install curl (newer version)
+RUN wget https://curl.haxx.se/download/curl-7.88.1.tar.gz && \
+    tar xzf curl-7.88.1.tar.gz && \
+    cd curl-7.88.1 && \
+    ./configure --prefix=/usr/local && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf curl-7.88.1*
+
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV PATH=/usr/local/bin:$PATH
 
 WORKDIR /opt
 RUN git clone https://github.com/Microsoft/vcpkg.git
