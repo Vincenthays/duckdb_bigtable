@@ -111,7 +111,7 @@ static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, Table
 
 	const auto ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
 	for (const auto &keyword_id : ls_keyword_id) {
-		string prefix_id = std::to_string(BigIntValue::Get(keyword_id));
+		string prefix_id = std::to_string(IntegerValue::Get(keyword_id));
 		reverse(prefix_id.begin(), prefix_id.end());
 		bind_data->ranges.emplace_back(
 		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
