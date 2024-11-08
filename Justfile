@@ -5,8 +5,8 @@ upload:
 [linux]
 upload:
     #!/usr/bin/env sh
-    docker build -f Dockerfile_linux_amd64 -t duckdb_extension_linux_amd64 &
-    docker build -f Dockerfile_linux_amd64_gcc4 -t duckdb_extension_linux_amd64_gcc4 &
+    docker build -f Dockerfile_linux_amd64 -t duckdb_extension_linux_amd64 . &
+    docker build -f Dockerfile_linux_amd64_gcc4 -t duckdb_extension_linux_amd64_gcc4 . &
     wait
 
     docker run -i -v /home/dataimpact/gs.json:/app/gs.json duckdb_extension_linux_amd64 bash <<EOF
