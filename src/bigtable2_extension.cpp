@@ -96,7 +96,7 @@ static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, Table
                                                    vector<LogicalType> &return_types, vector<string> &names) {
 	names = {"keyword_id", "shop_id", "date", "position", "pe_id", "retailer_p_id", "is_paid"};
 
-	return_types = {LogicalType::UINTEGER, LogicalType::UINTEGER, LogicalType::TIMESTAMP, LogicalType::USMALLINT,
+	return_types = {LogicalType::UINTEGER, LogicalType::UINTEGER, LogicalType::TIMESTAMP, LogicalType::UTINYINT,
 	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
 
 	auto bind_data = make_uniq<SearchFunctionData>();
@@ -268,7 +268,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				keyword_day.keyword_id = keyword_id;
 				keyword_day.shop_id = shop_id;
 				keyword_day.date = Value::TIMESTAMP(timestamp);
-				keyword_day.position = Value::USMALLINT(position);
+				keyword_day.position = Value::UTINYINT(position);
 
 				switch (cell.family_name()[0]) {
 				case 'p':
