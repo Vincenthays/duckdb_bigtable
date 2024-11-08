@@ -259,7 +259,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				const timestamp_t timestamp = Timestamp::FromEpochMicroSeconds(cell.timestamp().count());
 				const date_t date = Timestamp::GetDate(timestamp);
 				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
-				const int32_t hour = Timestamp::GetTime(timestamp).micros / 3600 / 1000;
+				const int32_t hour = Timestamp::GetTime(timestamp).micros / 3600 / 1000000;
 				std::cout << hour << std::endl;
 				const int32_t week_hour = weekday * 24 + hour;
 				const int32_t index = 200 * week_hour + position - 1;
