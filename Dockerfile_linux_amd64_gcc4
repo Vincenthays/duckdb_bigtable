@@ -13,11 +13,13 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && \
     pkg-config \
     zip \
     unzip \
+    curl \
     libssl-dev \
     zlib1g-dev \
     libcurl4-openssl-dev \
     gettext \
-    libexpat1-dev
+    libexpat1-dev \
+    ninja-build
 
 # Install older cmake that's more likely to work
 RUN wget https://cmake.org/files/v3.10/cmake-3.10.0-Linux-x86_64.tar.gz && \
@@ -38,6 +40,7 @@ RUN wget https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.7.4.tar.gz &
 
 ENV PATH=/usr/local/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/lib
+ENV VCPKG_FORCE_SYSTEM_BINARIES=1
 
 WORKDIR /opt
 RUN git clone https://github.com/Microsoft/vcpkg.git
