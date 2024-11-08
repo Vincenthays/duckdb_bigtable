@@ -2,12 +2,10 @@ FROM quay.io/pypa/manylinux2014_x86_64:latest
 
 RUN yum install -y epel-release -y pkgconfig
 RUN yum install -y gcc-c++
-RUN yum install -y nodejs
 RUN yum install -y curl zip unzip tar autoconf
 RUN yum install -y ninja-build
 RUN yum install -y perl-IPC-Cmd
 RUN yum install -y ccache
-RUN yum install -y java-11-openjdk-devel maven
 RUN yum install -y libgcc*i686 libstdc++*i686 glibc*i686 libgfortran*i686
 
 WORKDIR /opt
