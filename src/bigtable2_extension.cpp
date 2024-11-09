@@ -7,11 +7,6 @@
 #include <google/cloud/bigtable/table.h>
 
 using ::google::cloud::StatusOr;
-using google::cloud::bigtable::Filter;
-using google::cloud::bigtable::MakeDataClient;
-using google::cloud::bigtable::RowReader;
-using google::cloud::bigtable::Table;
-
 namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
@@ -43,13 +38,13 @@ struct Keyword {
 };
 
 struct ProductFunctionData : TableFunctionData {
-	shared_ptr<Table> table;
+	shared_ptr<cbt::Table> table;
 	vector<cbt::RowRange> ranges;
 	vector<Product> remainder;
 };
 
 struct SearchFunctionData : TableFunctionData {
-	shared_ptr<Table> table;
+	shared_ptr<cbt::Table> table;
 	vector<cbt::RowRange> ranges;
 	vector<Keyword> remainder;
 };
@@ -74,8 +69,8 @@ static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, Tabl
 	auto bind_data = make_uniq<ProductFunctionData>();
 
 	// Connect to Bigtable
-	auto data_client = MakeDataClient("dataimpact-processing", "processing");
-	bind_data->table = make_shared_ptr<Table>(data_client, "product");
+	auto data_client = cbt::MakeDataClient("dataimpact-processing", "processing");
+	bind_data->table = make_shared_ptr<cbt::Table>(data_client, "product");
 
 	// Extract and process parameters
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
@@ -102,8 +97,8 @@ static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, Table
 	auto bind_data = make_uniq<SearchFunctionData>();
 
 	// Connect to Bigtable
-	auto data_client = MakeDataClient("dataimpact-processing", "processing");
-	bind_data->table = make_shared_ptr<Table>(data_client, "search");
+	auto data_client = cbt::MakeDataClient("dataimpact-processing", "processing");
+	bind_data->table = make_shared_ptr<cbt::Table>(data_client, "search");
 
 	// Extract and process parameters
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
@@ -121,7 +116,7 @@ static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, Table
 }
 
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
-	const auto filter = Filter::PassAllFilter();
+	const auto filter = cbt::Filter::PassAllFilter();
 	auto &state = (ProductFunctionData &)*data.bind_data;
 
 	// Process each range
@@ -227,7 +222,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 }
 
 void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
-	const auto filter = Filter::PassAllFilter();
+	const auto filter = cbt::Filter::PassAllFilter();
 	auto &state = (SearchFunctionData &)*data.bind_data;
 
 	while (!state.ranges.empty()) {
