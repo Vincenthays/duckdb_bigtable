@@ -68,7 +68,7 @@ static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, Tabl
 
 	auto bind_data = make_uniq<ProductFunctionData>();
 	bind_data->table = make_shared_ptr<cbt::Table>(
-		cbt::MakeDataConnection(), cbt::TableResource("dataimpact-processing", "processing", "product"));
+	    cbt::MakeDataConnection(), cbt::TableResource("dataimpact-processing", "processing", "product"));
 
 	// Extract and process parameters
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
@@ -93,8 +93,8 @@ static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, Table
 	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
 
 	auto bind_data = make_uniq<SearchFunctionData>();
-	bind_data->table = make_shared_ptr<cbt::Table>(
-		cbt::MakeDataConnection(), cbt::TableResource("dataimpact-processing", "processing", "search"));
+	bind_data->table = make_shared_ptr<cbt::Table>(cbt::MakeDataConnection(),
+	                                               cbt::TableResource("dataimpact-processing", "processing", "search"));
 
 	// Extract and process parameters
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
