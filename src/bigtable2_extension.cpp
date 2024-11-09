@@ -317,15 +317,15 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 }
 
 void Bigtable2Extension::Load(DuckDB &db) {
-	ExtensionUtil::RegisterFunction(
-	    *db.instance,
-	    TableFunction("product", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
-	                  ProductFunction, ProductFunctionBind));
+	TableFunction product("product",
+	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
+	                      ProductFunction, ProductFunctionBind);
+	ExtensionUtil::RegisterFunction(*db.instance, product);
 
-	ExtensionUtil::RegisterFunction(
-	    *db.instance,
-	    TableFunction("search", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
-	                  SearchFunction, SearchFunctionBind));
+	TableFunction search("search",
+	                     {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
+	                     SearchFunction, SearchFunctionBind);
+	ExtensionUtil::RegisterFunction(*db.instance, search);
 }
 
 std::string Bigtable2Extension::Name() {
