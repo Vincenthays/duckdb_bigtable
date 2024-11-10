@@ -264,7 +264,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				switch (cell.family_name()[0]) {
 				case 'p':
 					if (cell.value().starts_with("id_ret_"))
-						keyword_day.retailer_p_id = Value(cell.value());
+						keyword_day.retailer_p_id = Value(cell.value().substr(7));
 					else
 						keyword_day.pe_id = Value::UBIGINT(std::stoull(cell.value()));
 					break;
