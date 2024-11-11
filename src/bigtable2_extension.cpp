@@ -142,7 +142,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			// Iterate over each cell in the row
 			for (const auto &cell : row.cells()) {
 				// Convert timestamp to date and get weekday index (0-based, Mon-Sun)
-				const date_t date = Date::EpochToDate(cell.timestamp().count() / 1000000);
+				const date_t date = Date::EpochToDate(cell.timestamp().count() / 1'000'000);
 				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 
 				// Get reference to Product for the current weekday
@@ -250,7 +250,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				const timestamp_t timestamp = Timestamp::FromEpochMicroSeconds(cell.timestamp().count());
 				const date_t date = Timestamp::GetDate(timestamp);
 				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
-				const int32_t hour = Timestamp::GetTime(timestamp).micros / 1000000 / 3600;
+				const int32_t hour = Timestamp::GetTime(timestamp).micros / 3'600'000'000;
 				const int32_t week_hour = weekday * 24 + hour;
 				const int32_t index = 200 * week_hour + position - 1;
 
