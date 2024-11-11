@@ -307,16 +307,20 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	output.SetCardinality(cardinality);
 }
 
-void Bigtable2Extension::Load(DuckDB &db) {
+static void LoadInternal(DatabaseInstance &db) {
 	TableFunction product("product",
 	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
 	                      ProductFunction, ProductFunctionBind);
-	ExtensionUtil::RegisterFunction(*db.instance, product);
+	ExtensionUtil::RegisterFunction(db, product);
 
 	TableFunction search("search",
 	                     {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
 	                     SearchFunction, SearchFunctionBind);
-	ExtensionUtil::RegisterFunction(*db.instance, search);
+	ExtensionUtil::RegisterFunction(db, search);
+}
+
+void Bigtable2Extension::Load(DuckDB &db) {
+	LoadInternal(*db.instance);
 }
 
 std::string Bigtable2Extension::Name() {
@@ -336,8 +340,7 @@ std::string Bigtable2Extension::Version() const {
 extern "C" {
 
 DUCKDB_EXTENSION_API void bigtable2_init(duckdb::DatabaseInstance &db) {
-	duckdb::DuckDB db_wrapper(db);
-	db_wrapper.LoadExtension<duckdb::Bigtable2Extension>();
+	LoadInternal(db);
 }
 
 DUCKDB_EXTENSION_API const char *bigtable2_version() {
