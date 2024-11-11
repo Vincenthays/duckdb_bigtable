@@ -9,7 +9,7 @@ include_directories(src/include)
 
 find_package(google_cloud_cpp_bigtable REQUIRED)
 
-build_static_extension(${EXT_NAME} src/bigtable2_extension.cpp})
+build_static_extension(${EXT_NAME} src/bigtable2_extension.cpp)
 build_loadable_extension(${EXT_NAME} " " src/bigtable2_extension.cpp)
 
 # Link google-cloud-cpp in both the static library as the loadable extension
