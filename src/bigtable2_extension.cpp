@@ -120,7 +120,6 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 		const auto range = state.ranges[0];
 		state.ranges.erase(state.ranges.begin());
 
-		// Process each row in the result set
 		for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, filter)) {
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
@@ -128,7 +127,6 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			const auto &row = row_result.value();
 			const auto &row_key = row.row_key();
 
-			// Extract pe_id and shop_id from row key
 			const auto index_1 = row_key.find_first_of('/');
 			const auto index_2 = row_key.find_last_of('/');
 			string prefix_id = row_key.substr(0, index_1);
@@ -136,25 +134,20 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			const auto pe_id = Value::UBIGINT(std::stoull(prefix_id));
 			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
 
-			// Array to hold data for each day of the week
 			std::array<Product, 7> product_week;
 
-			// Iterate over each cell in the row
 			for (const auto &cell : row.cells()) {
-				// Convert timestamp to date and get weekday index (0-based, Mon-Sun)
 				const date_t date = Date::EpochToDate(cell.timestamp().count() / 1'000'000);
 				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 
-				// Get reference to Product for the current weekday
 				auto &product_day = product_week[weekday];
 				product_day.valid = true;
 				product_day.pe_id = pe_id;
 				product_day.shop_id = shop_id;
 				product_day.date = Value::DATE(date);
 
-				// Process data based on column family and qualifier
 				switch (cell.family_name()[0]) {
-				case 'p': // Price data
+				case 'p':
 					switch (cell.column_qualifier()[0]) {
 					case 'p':
 						product_day.price = Value(std::stod(cell.value()));
@@ -167,12 +160,12 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 						break;
 					}
 					break;
-				case 'd': // Promo data
+				case 'd':
 					product_day.promo_id = Value::UINTEGER(std::stoul(cell.column_qualifier()));
 					product_day.promo_text = Value(cell.value());
 					break;
-				case 's': // Shelf data (unpaid)
-				case 'S': // Shelf data (paid)
+				case 's':
+				case 'S':
 					product_day.shelf.emplace_back(Value(cell.column_qualifier()));
 					product_day.position.emplace_back(Value::UINTEGER(std::stoul(cell.value())));
 					product_day.is_paid.emplace_back(Value::BOOLEAN(cell.family_name()[0] == 'S'));
