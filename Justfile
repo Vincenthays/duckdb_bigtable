@@ -6,6 +6,9 @@ deploy:
 [linux]
 deploy:
     #!/usr/bin/env sh
+    git reset --hard origin
+	git pull
+    
     docker build -f Dockerfile_linux_amd64 -t duckdb_extension_linux_amd64 . &
     docker build -f Dockerfile_linux_amd64_gcc4 -t duckdb_extension_linux_amd64_gcc4 . &
     wait
