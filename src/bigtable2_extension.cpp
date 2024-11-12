@@ -115,8 +115,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	const auto filter = cbt::Filter::PassAllFilter();
 	auto &state = (ProductFunctionData &)*data.bind_data;
 
-	// Process each range
-	while (!state.ranges.empty()) {
+	while (!state.ranges.empty() && state.remainder.size() < STANDARD_VECTOR_SIZE) {
+
 		const auto range = state.ranges[0];
 		state.ranges.erase(state.ranges.begin());
 
@@ -185,9 +185,6 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 					state.remainder.emplace_back(product);
 			}
 		}
-
-		if (!state.remainder.empty())
-			break;
 	}
 
 	idx_t cardinality = 0;
@@ -221,7 +218,8 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	const auto filter = cbt::Filter::PassAllFilter();
 	auto &state = (SearchFunctionData &)*data.bind_data;
 
-	while (!state.ranges.empty()) {
+	while (!state.ranges.empty() && state.remainder.size() < STANDARD_VECTOR_SIZE) {
+
 		const auto range = state.ranges[0];
 		state.ranges.erase(state.ranges.begin());
 
@@ -279,9 +277,6 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 					state.remainder.emplace_back(keyword);
 			}
 		}
-
-		if (!state.remainder.empty())
-			break;
 	}
 
 	idx_t cardinality = 0;
