@@ -10,3 +10,4 @@ test/python/__pycache__/
 vcpkg_installed
 CMake*
 *.log
+.cache
