@@ -22,3 +22,8 @@ deploy:
         gcloud auth activate-service-account --key-file /app/gs.json
         gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/v1.1.3/linux_amd64_gcc4/bigtable2.duckdb_extension.gz
     EOF
+
+debug:
+    export VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake
+    GEN=ninja make debug
+    ./build/debug/duckdb -c "FROM product(202420, 202420, [1124000100000])"
