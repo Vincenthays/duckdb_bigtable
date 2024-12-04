@@ -113,7 +113,7 @@ static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, Table
 
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = cbt::Filter::PassAllFilter();
-	auto &state = (ProductFunctionData &)*data.bind_data;
+	auto &state = data.bind_data->CastNoConst<ProductFunctionData>();
 
 	while (!state.ranges.empty() && state.remainder.size() < STANDARD_VECTOR_SIZE) {
 
@@ -209,7 +209,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = cbt::Filter::PassAllFilter();
-	auto &state = (SearchFunctionData &)*data.bind_data;
+	auto &state = data.bind_data->CastNoConst<SearchFunctionData>();
 
 	while (!state.ranges.empty() && state.remainder.size() < STANDARD_VECTOR_SIZE) {
 
@@ -299,11 +299,15 @@ static void LoadInternal(DatabaseInstance &db) {
 	TableFunction product("product",
 	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
 	                      ProductFunction, ProductFunctionBind);
+	product.projection_pushdown = true;
+	product.filter_pushdown = true;
 	ExtensionUtil::RegisterFunction(db, product);
 
 	TableFunction search("search",
 	                     {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
 	                     SearchFunction, SearchFunctionBind);
+	product.projection_pushdown = true;
+	product.filter_pushdown = true;
 	ExtensionUtil::RegisterFunction(db, search);
 }
 
