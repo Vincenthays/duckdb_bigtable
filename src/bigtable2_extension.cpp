@@ -26,27 +26,10 @@ struct Product {
 	vector<Value> is_paid;
 };
 
-struct Keyword {
-	bool valid = false;
-	Value keyword_id;
-	Value shop_id;
-	Value date;
-	Value position;
-	Value pe_id;
-	Value retailer_p_id;
-	Value is_paid = false;
-};
-
 struct ProductFunctionData : TableFunctionData {
 	unique_ptr<cbt::Table> table;
 	vector<cbt::RowRange> ranges;
 	vector<Product> remainder;
-};
-
-struct SearchFunctionData : TableFunctionData {
-	unique_ptr<cbt::Table> table;
-	vector<cbt::RowRange> ranges;
-	vector<Keyword> remainder;
 };
 
 static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
@@ -77,32 +60,6 @@ static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, Tabl
 	const auto ls_pe_id = ListValue::GetChildren(input.inputs[2]);
 	for (const auto &pe_id : ls_pe_id) {
 		string prefix_id = std::to_string(BigIntValue::Get(pe_id));
-		reverse(prefix_id.begin(), prefix_id.end());
-		bind_data->ranges.emplace_back(
-		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
-	}
-
-	return std::move(bind_data);
-}
-
-static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctionBindInput &input,
-                                                   vector<LogicalType> &return_types, vector<string> &names) {
-	names = {"keyword_id", "shop_id", "date", "position", "pe_id", "retailer_p_id", "is_paid"};
-
-	return_types = {LogicalType::UINTEGER, LogicalType::UINTEGER, LogicalType::TIMESTAMP_S, LogicalType::UTINYINT,
-	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
-
-	auto bind_data = make_uniq<SearchFunctionData>();
-	bind_data->table = make_uniq<cbt::Table>(cbt::MakeDataConnection(),
-	                                         cbt::TableResource("dataimpact-processing", "processing", "search"));
-
-	// Extract and process parameters
-	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
-	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
-
-	const auto ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
-	for (const auto &keyword_id : ls_keyword_id) {
-		string prefix_id = std::to_string(IntegerValue::Get(keyword_id));
 		reverse(prefix_id.begin(), prefix_id.end());
 		bind_data->ranges.emplace_back(
 		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
@@ -205,6 +162,49 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 	state.remainder.clear();
 	output.SetCardinality(cardinality);
+}
+
+struct Keyword {
+	bool valid = false;
+	Value keyword_id;
+	Value shop_id;
+	Value date;
+	Value position;
+	Value pe_id;
+	Value retailer_p_id;
+	Value is_paid = false;
+};
+
+struct SearchFunctionData : TableFunctionData {
+	unique_ptr<cbt::Table> table;
+	vector<cbt::RowRange> ranges;
+	vector<Keyword> remainder;
+};
+
+static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctionBindInput &input,
+                                                   vector<LogicalType> &return_types, vector<string> &names) {
+	names = {"keyword_id", "shop_id", "date", "position", "pe_id", "retailer_p_id", "is_paid"};
+
+	return_types = {LogicalType::UINTEGER, LogicalType::UINTEGER, LogicalType::TIMESTAMP_S, LogicalType::UTINYINT,
+	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
+
+	auto bind_data = make_uniq<SearchFunctionData>();
+	bind_data->table = make_uniq<cbt::Table>(cbt::MakeDataConnection(),
+	                                         cbt::TableResource("dataimpact-processing", "processing", "search"));
+
+	// Extract and process parameters
+	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
+	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
+
+	const auto ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
+	for (const auto &keyword_id : ls_keyword_id) {
+		string prefix_id = std::to_string(IntegerValue::Get(keyword_id));
+		reverse(prefix_id.begin(), prefix_id.end());
+		bind_data->ranges.emplace_back(
+		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
+	}
+
+	return std::move(bind_data);
 }
 
 void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
