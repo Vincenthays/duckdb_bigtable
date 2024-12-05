@@ -12,13 +12,13 @@ namespace cbt = ::google::cloud::bigtable;
 namespace duckdb {
 
 struct ProductGlobalState : GlobalTableFunctionState {
-	unique_ptr<cbt::Table> table;
+	shared_ptr<cbt::Table> table;
 };
 
 static unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
 	auto global_state = make_uniq<ProductGlobalState>();
-	global_state->table = make_uniq<cbt::Table>(cbt::MakeDataConnection(),
-	                                            cbt::TableResource("dataimpact-processing", "processing", "product"));
+	global_state->table = make_shared_ptr<cbt::Table>(cbt::MakeDataConnection(),
+		cbt::TableResource("dataimpact-processing", "processing", "product"));
 	return std::move(global_state);
 }
 
