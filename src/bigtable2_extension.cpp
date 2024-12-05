@@ -11,6 +11,17 @@ namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
+struct ProductGlobalState : GlobalTableFunctionState {
+	unique_ptr<cbt::Table> table;
+};
+
+static unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
+	auto global_state = make_uniq<ProductGlobalState>();
+	global_state->table = make_uniq<cbt::Table>(cbt::MakeDataConnection(),
+	                                            cbt::TableResource("dataimpact-processing", "processing", "product"));
+	return std::move(global_state);
+}
+
 struct Product {
 	bool valid = false;
 	Value pe_id;
@@ -27,7 +38,6 @@ struct Product {
 };
 
 struct ProductFunctionData : TableFunctionData {
-	unique_ptr<cbt::Table> table;
 	vector<cbt::RowRange> ranges;
 	vector<Product> remainder;
 };
@@ -50,9 +60,6 @@ static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, Tabl
 	                LogicalType::LIST(LogicalType::BOOLEAN)};
 
 	auto bind_data = make_uniq<ProductFunctionData>();
-	bind_data->table = make_uniq<cbt::Table>(cbt::MakeDataConnection(),
-	                                         cbt::TableResource("dataimpact-processing", "processing", "product"));
-
 	// Extract and process parameters
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
 	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
@@ -70,14 +77,15 @@ static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, Tabl
 
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = cbt::Filter::PassAllFilter();
-	auto &state = data.bind_data->CastNoConst<ProductFunctionData>();
+	auto &bind_data = data.bind_data->CastNoConst<ProductFunctionData>();
+	auto &global_state = data.global_state->Cast<ProductGlobalState>();
 
-	while (!state.ranges.empty() && state.remainder.size() < STANDARD_VECTOR_SIZE) {
+	while (!bind_data.ranges.empty() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
 
-		const auto range = state.ranges[0];
-		state.ranges.erase(state.ranges.begin());
+		const auto range = bind_data.ranges[0];
+		bind_data.ranges.erase(bind_data.ranges.begin());
 
-		for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, filter)) {
+		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
 
@@ -132,14 +140,14 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 			for (const auto &product : product_week) {
 				if (product.valid)
-					state.remainder.emplace_back(product);
+					bind_data.remainder.emplace_back(product);
 			}
 		}
 	}
 
 	idx_t cardinality = 0;
 
-	for (const auto &day : state.remainder) {
+	for (const auto &day : bind_data.remainder) {
 		output.SetValue(0, cardinality, day.pe_id);
 		output.SetValue(1, cardinality, day.shop_id);
 		output.SetValue(2, cardinality, day.date);
@@ -154,14 +162,25 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 		cardinality++;
 		if (cardinality == STANDARD_VECTOR_SIZE) {
-			state.remainder.erase(state.remainder.begin(), state.remainder.begin() + cardinality);
+			bind_data.remainder.erase(bind_data.remainder.begin(), bind_data.remainder.begin() + cardinality);
 			output.SetCardinality(cardinality);
 			return;
 		}
 	}
 
-	state.remainder.clear();
+	bind_data.remainder.clear();
 	output.SetCardinality(cardinality);
+}
+
+struct SearchGlobalState : GlobalTableFunctionState {
+	unique_ptr<cbt::Table> table;
+};
+
+static unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
+	auto global_state = make_uniq<SearchGlobalState>();
+	global_state->table = make_uniq<cbt::Table>(cbt::MakeDataConnection(),
+	                                            cbt::TableResource("dataimpact-processing", "processing", "search"));
+	return std::move(global_state);
 }
 
 struct Keyword {
@@ -189,9 +208,6 @@ static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, Table
 	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
 
 	auto bind_data = make_uniq<SearchFunctionData>();
-	bind_data->table = make_uniq<cbt::Table>(cbt::MakeDataConnection(),
-	                                         cbt::TableResource("dataimpact-processing", "processing", "search"));
-
 	// Extract and process parameters
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
 	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
@@ -209,14 +225,15 @@ static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, Table
 
 void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = cbt::Filter::PassAllFilter();
-	auto &state = data.bind_data->CastNoConst<SearchFunctionData>();
+	auto &bind_data = data.bind_data->CastNoConst<SearchFunctionData>();
+	auto &global_state = data.global_state->Cast<SearchGlobalState>();
 
-	while (!state.ranges.empty() && state.remainder.size() < STANDARD_VECTOR_SIZE) {
+	while (!bind_data.ranges.empty() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
 
-		const auto range = state.ranges[0];
-		state.ranges.erase(state.ranges.begin());
+		const auto range = bind_data.ranges[0];
+		bind_data.ranges.erase(bind_data.ranges.begin());
 
-		for (StatusOr<cbt::Row> &row_result : state.table->ReadRows(range, filter)) {
+		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
 
@@ -267,14 +284,14 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 			for (const auto &keyword : keyword_week) {
 				if (keyword.valid)
-					state.remainder.emplace_back(keyword);
+					bind_data.remainder.emplace_back(keyword);
 			}
 		}
 	}
 
 	idx_t cardinality = 0;
 
-	for (const auto &day : state.remainder) {
+	for (const auto &day : bind_data.remainder) {
 		output.SetValue(0, cardinality, day.keyword_id);
 		output.SetValue(1, cardinality, day.shop_id);
 		output.SetValue(2, cardinality, day.date);
@@ -285,27 +302,27 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 		cardinality++;
 		if (cardinality == STANDARD_VECTOR_SIZE) {
-			state.remainder.erase(state.remainder.begin(), state.remainder.begin() + cardinality);
+			bind_data.remainder.erase(bind_data.remainder.begin(), bind_data.remainder.begin() + cardinality);
 			output.SetCardinality(cardinality);
 			return;
 		}
 	}
 
-	state.remainder.clear();
+	bind_data.remainder.clear();
 	output.SetCardinality(cardinality);
 }
 
 static void LoadInternal(DatabaseInstance &db) {
 	TableFunction product("product",
 	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
-	                      ProductFunction, ProductFunctionBind);
+	                      ProductFunction, ProductFunctionBind, ProductInitGlobal);
 	// product.projection_pushdown = true;
 	// product.filter_pushdown = true;
 	ExtensionUtil::RegisterFunction(db, product);
 
 	TableFunction search("search",
 	                     {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
-	                     SearchFunction, SearchFunctionBind);
+	                     SearchFunction, SearchFunctionBind, SearchInitGlobal);
 	// product.projection_pushdown = true;
 	// product.filter_pushdown = true;
 	ExtensionUtil::RegisterFunction(db, search);
