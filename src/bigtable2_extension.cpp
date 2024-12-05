@@ -173,13 +173,13 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 }
 
 struct SearchGlobalState : GlobalTableFunctionState {
-	unique_ptr<cbt::Table> table;
+	shared_ptr<cbt::Table> table;
 };
 
 static unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
 	auto global_state = make_uniq<SearchGlobalState>();
-	global_state->table = make_uniq<cbt::Table>(cbt::MakeDataConnection(),
-	                                            cbt::TableResource("dataimpact-processing", "processing", "search"));
+	global_state->table = make_shared_ptr<cbt::Table>(cbt::MakeDataConnection(),
+		cbt::TableResource("dataimpact-processing", "processing", "search"));
 	return std::move(global_state);
 }
 
