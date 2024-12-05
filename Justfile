@@ -26,5 +26,8 @@ deploy:
 debug:
     export VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake
     GEN=ninja make debug
-    ./build/debug/duckdb -c "FROM product(2024_20, 2024_20, [1124000100000])"
-    ./build/debug/duckdb -c "FROM search(2024_48, 2024_48, [130000])"
+    just run "FROM product(2024_20, 2024_20, [1124000100000])"
+    just run "FROM search(2024_48, 2024_48, [130000])"
+
+run args:
+    ./build/debug/duckdb -c "{{args}}"
