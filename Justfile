@@ -30,3 +30,7 @@ debug:
 
 run args:
     ./build/debug/duckdb -c "{{args}}"
+
+debug_where:
+    VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make debug
+    @just run "FROM product(2024_20, 2024_20, [1124000100000, 1124000100001, 1124000100002, 1124000100003, 1124000100004, 1124000100005]) WHERE pe_id IN (1124000100000, 1124000100001, 1124000100005, 1124000100001)"

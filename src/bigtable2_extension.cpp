@@ -12,14 +12,59 @@ namespace cbt = ::google::cloud::bigtable;
 namespace duckdb {
 
 struct ProductGlobalState : GlobalTableFunctionState {
+	
 	shared_ptr<cbt::Table> table;
+	idx_t max_threads;
+	idx_t MaxThreads() const override {
+		return max_threads;
+	}
 };
 
 static unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
+	auto const &threadsNb = TaskScheduler::GetScheduler(context).NumberOfThreads();
+	std::cout << "threadsNb: " << threadsNb << std::endl;
+
+	if (input.filters) {
+		for (const auto &column_filter : input.filters->filters) {
+			const auto &filter = column_filter.second;
+			switch (filter->filter_type) {
+			case TableFilterType::CONSTANT_COMPARISON:
+				std::cout << "CONSTANT_COMPARISON" << std::endl;
+				break;
+			case TableFilterType::IS_NULL:
+				std::cout << "IS_NULL" << std::endl;
+				break;
+			case TableFilterType::IS_NOT_NULL:
+				std::cout << "IS_NOT_NULL" << std::endl;
+				break;
+			case TableFilterType::CONJUNCTION_OR:
+				std::cout << "CONJUNCTION_OR" << std::endl;
+				break;
+			case TableFilterType::CONJUNCTION_AND:
+				std::cout << "CONJUNCTION_AND" << std::endl;
+				for (const auto &child : filter->Cast<ConjunctionAndFilter>().child_filters) {
+					std::cout << child->ToString("pe_id") << std::endl;
+				}
+				break;
+			case TableFilterType::STRUCT_EXTRACT:
+				std::cout << "STRUCT_EXTRACT" << std::endl;
+				break;
+			}
+		}
+	} else {
+		std::cout << "NO_FILTER" << std::endl;
+	}
+
 	auto global_state = make_uniq<ProductGlobalState>();
+	global_state->max_threads = TaskScheduler::GetScheduler(context).NumberOfThreads();;
 	global_state->table = make_shared_ptr<cbt::Table>(cbt::MakeDataConnection(),
 		cbt::TableResource("dataimpact-processing", "processing", "product"));
 	return std::move(global_state);
+}
+
+unique_ptr<LocalTableFunctionState> ProductInitLocal(ExecutionContext &context, TableFunctionInitInput &input, GlobalTableFunctionState *global_state) {
+	std::cout << "test" << std::endl;
+	return make_uniq<LocalTableFunctionState>();
 }
 
 struct Product {
@@ -315,16 +360,13 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 static void LoadInternal(DatabaseInstance &db) {
 	TableFunction product("product",
 	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
-	                      ProductFunction, ProductFunctionBind, ProductInitGlobal);
-	// product.projection_pushdown = true;
-	// product.filter_pushdown = true;
+	                      ProductFunction, ProductFunctionBind, ProductInitGlobal, ProductInitLocal);
+	product.filter_pushdown = true;
 	ExtensionUtil::RegisterFunction(db, product);
 
 	TableFunction search("search",
 	                     {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
 	                     SearchFunction, SearchFunctionBind, SearchInitGlobal);
-	// product.projection_pushdown = true;
-	// product.filter_pushdown = true;
 	ExtensionUtil::RegisterFunction(db, search);
 }
 
