@@ -87,6 +87,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 	while (bind_data.ranges_idx < bind_data.ranges.size() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
 		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
+
 		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
