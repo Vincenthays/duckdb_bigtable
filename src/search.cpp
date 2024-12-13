@@ -12,7 +12,8 @@ struct SearchGlobalState : GlobalTableFunctionState {
 	shared_ptr<cbt::Table> table;
 };
 
-DUCKDB_EXTENSION_API unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
+DUCKDB_EXTENSION_API unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context,
+                                                                           TableFunctionInitInput &input) {
 	auto global_state = make_uniq<SearchGlobalState>();
 	global_state->table = make_shared_ptr<cbt::Table>(
 	    cbt::MakeDataConnection(), cbt::TableResource("dataimpact-processing", "processing", "search"));
@@ -39,7 +40,8 @@ struct SearchFunctionData : TableFunctionData {
 };
 
 DUCKDB_EXTENSION_API unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctionBindInput &input,
-                                                   vector<LogicalType> &return_types, vector<string> &names) {
+                                                                 vector<LogicalType> &return_types,
+                                                                 vector<string> &names) {
 	names = {"keyword_id", "shop_id", "date", "position", "pe_id", "retailer_p_id", "is_paid"};
 
 	return_types = {LogicalType::UINTEGER, LogicalType::UINTEGER, LogicalType::TIMESTAMP_S, LogicalType::UTINYINT,
@@ -147,4 +149,4 @@ DUCKDB_EXTENSION_API void SearchFunction(ClientContext &context, TableFunctionIn
 
 	output.SetCardinality(cardinality);
 }
-}
+} // namespace duckdb

@@ -12,7 +12,8 @@ struct ProductGlobalState : GlobalTableFunctionState {
 	shared_ptr<cbt::Table> table;
 };
 
-DUCKDB_EXTENSION_API unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
+DUCKDB_EXTENSION_API unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context,
+                                                                            TableFunctionInitInput &input) {
 	auto global_state = make_uniq<ProductGlobalState>();
 	global_state->table = make_shared_ptr<cbt::Table>(
 	    cbt::MakeDataConnection(), cbt::TableResource("dataimpact-processing", "processing", "product"));
@@ -43,7 +44,8 @@ struct ProductFunctionData : TableFunctionData {
 };
 
 DUCKDB_EXTENSION_API unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
-                                                    vector<LogicalType> &return_types, vector<string> &names) {
+                                                                  vector<LogicalType> &return_types,
+                                                                  vector<string> &names) {
 	names = {"pe_id",    "shop_id",    "date",  "price",    "base_price", "unit_price",
 	         "promo_id", "promo_text", "shelf", "position", "is_paid"};
 
@@ -170,4 +172,4 @@ DUCKDB_EXTENSION_API void ProductFunction(ClientContext &context, TableFunctionI
 
 	output.SetCardinality(cardinality);
 }
-}
+} // namespace duckdb
