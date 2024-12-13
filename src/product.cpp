@@ -1,5 +1,3 @@
-#include "product.hpp"
-#include "bigtable2_extension.hpp"
 #include "duckdb.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension_util.hpp"
