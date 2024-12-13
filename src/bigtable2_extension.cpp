@@ -38,6 +38,7 @@ struct Product {
 };
 
 struct ProductFunctionData : TableFunctionData {
+	idx_t ranges_idx = 0;
 	vector<cbt::RowRange> ranges;
 
 	idx_t remainder_idx = 0;
@@ -84,10 +85,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 	std::array<Product, 7> product_week;
 
-	while (!bind_data.ranges.empty() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
-		const auto range = bind_data.ranges[0];
-		bind_data.ranges.erase(bind_data.ranges.begin());
-
+	while (bind_data.ranges_idx < bind_data.ranges.size() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
+		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
 		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
@@ -198,6 +197,7 @@ struct Keyword {
 };
 
 struct SearchFunctionData : TableFunctionData {
+	id_t ranges_idx = 0;
 	vector<cbt::RowRange> ranges;
 
 	idx_t remainder_idx = 0;
@@ -234,9 +234,8 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 	vector<Keyword> keyword_week(200 * 7 * 24);
 
-	while (!bind_data.ranges.empty() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
-		const auto range = bind_data.ranges[0];
-		bind_data.ranges.erase(bind_data.ranges.begin());
+	while (bind_data.ranges_idx < bind_data.ranges.size() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
+		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
 
 		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
 			if (!row_result)
