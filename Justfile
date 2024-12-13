@@ -30,3 +30,6 @@ debug:
 
 run args:
     ./build/debug/duckdb -c "{{args}}"
+
+bench:
+    time just run "FROM search(2024_45, 2024_45, [98334])"
