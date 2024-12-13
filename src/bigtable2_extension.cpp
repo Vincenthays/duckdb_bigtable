@@ -39,7 +39,7 @@ struct Product {
 
 struct ProductFunctionData : TableFunctionData {
 	vector<cbt::RowRange> ranges;
-	
+
 	idx_t remainder_idx = 0;
 	vector<Product> remainder;
 };
@@ -150,7 +150,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 	idx_t cardinality = 0;
 
-	while(bind_data.remainder_idx < bind_data.remainder.size()) {
+	while (bind_data.remainder_idx < bind_data.remainder.size()) {
 		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
 
 		output.SetValue(0, cardinality, day.pe_id);
@@ -296,7 +296,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 	idx_t cardinality = 0;
 
-	while(bind_data.remainder_idx < bind_data.remainder.size()) {
+	while (bind_data.remainder_idx < bind_data.remainder.size()) {
 		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
 
 		output.SetValue(0, cardinality, day.keyword_id);
