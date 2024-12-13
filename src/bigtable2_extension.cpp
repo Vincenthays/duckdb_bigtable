@@ -93,8 +93,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			const auto &row = row_result.value();
 			const auto &row_key = row.row_key();
 
-			const auto index_1 = row_key.find_first_of('/');
-			const auto index_2 = row_key.find_last_of('/');
+			const auto &index_1 = row_key.find_first_of('/');
+			const auto &index_2 = row_key.find_last_of('/');
 			string prefix_id = row_key.substr(0, index_1);
 			reverse(prefix_id.begin(), prefix_id.end());
 			const auto pe_id = Value::UBIGINT(std::stoull(prefix_id));
@@ -241,8 +241,8 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			const auto &row = row_result.value();
 			const auto &row_key = row.row_key();
 
-			const auto index_1 = row_key.find_first_of('/');
-			const auto index_2 = row_key.find_last_of('/');
+			const auto &index_1 = row_key.find_first_of('/');
+			const auto &index_2 = row_key.find_last_of('/');
 			string prefix_id = row_key.substr(0, index_1);
 			reverse(prefix_id.begin(), prefix_id.end());
 			const auto keyword_id = Value::UINTEGER(std::stoull(prefix_id));
