@@ -262,9 +262,8 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				const int32_t &weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 				const int32_t &hour = Timestamp::GetTime(timestamp).micros / 3'600'000'000;
 				const int32_t &week_hour = weekday * 24 + hour;
-				const int32_t &index = 200 * week_hour + position - 1;
 
-				auto &keyword_day = keyword_week[index];
+				auto &keyword_day = keyword_week[200 * week_hour + position - 1];
 				keyword_day.valid = true;
 				keyword_day.keyword_id = keyword_id;
 				keyword_day.shop_id = shop_id;
