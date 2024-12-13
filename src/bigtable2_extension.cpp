@@ -39,6 +39,8 @@ struct Product {
 
 struct ProductFunctionData : TableFunctionData {
 	vector<cbt::RowRange> ranges;
+	
+	idx_t remainder_idx = 0;
 	vector<Product> remainder;
 };
 
@@ -147,7 +149,9 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 	idx_t cardinality = 0;
 
-	for (const auto &day : bind_data.remainder) {
+	while(bind_data.remainder_idx < bind_data.remainder.size()) {
+		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
+		
 		output.SetValue(0, cardinality, day.pe_id);
 		output.SetValue(1, cardinality, day.shop_id);
 		output.SetValue(2, cardinality, day.date);
@@ -160,9 +164,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 		output.SetValue(9, cardinality, Value::LIST(day.position));
 		output.SetValue(10, cardinality, Value::LIST(day.is_paid));
 
-		cardinality++;
-		if (cardinality == STANDARD_VECTOR_SIZE) {
-			bind_data.remainder.erase(bind_data.remainder.begin(), bind_data.remainder.begin() + cardinality);
+		if (++cardinality == STANDARD_VECTOR_SIZE) {
 			output.SetCardinality(cardinality);
 			return;
 		}
@@ -195,8 +197,9 @@ struct Keyword {
 };
 
 struct SearchFunctionData : TableFunctionData {
-	unique_ptr<cbt::Table> table;
 	vector<cbt::RowRange> ranges;
+
+	idx_t remainder_idx = 0;
 	vector<Keyword> remainder;
 };
 
@@ -291,7 +294,9 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 	idx_t cardinality = 0;
 
-	for (const auto &day : bind_data.remainder) {
+	while(bind_data.remainder_idx < bind_data.remainder.size()) {
+		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
+
 		output.SetValue(0, cardinality, day.keyword_id);
 		output.SetValue(1, cardinality, day.shop_id);
 		output.SetValue(2, cardinality, day.date);
@@ -300,9 +305,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 		output.SetValue(5, cardinality, day.retailer_p_id);
 		output.SetValue(6, cardinality, day.is_paid);
 
-		cardinality++;
-		if (cardinality == STANDARD_VECTOR_SIZE) {
-			bind_data.remainder.erase(bind_data.remainder.begin(), bind_data.remainder.begin() + cardinality);
+		if (++cardinality == STANDARD_VECTOR_SIZE) {
 			output.SetCardinality(cardinality);
 			return;
 		}
