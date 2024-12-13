@@ -25,6 +25,8 @@ deploy:
 
 debug:
     VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make debug
+    
+test:
     just run "FROM product(2024_20, 2024_20, [1124000100000])"
     just run "FROM search(2024_48, 2024_48, [130000])"
 
