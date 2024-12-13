@@ -82,6 +82,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	auto &bind_data = data.bind_data->CastNoConst<ProductFunctionData>();
 	auto &global_state = data.global_state->Cast<ProductGlobalState>();
 
+	std::array<Product, 7> product_week;
+
 	while (!bind_data.ranges.empty() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
 		const auto range = bind_data.ranges[0];
 		bind_data.ranges.erase(bind_data.ranges.begin());
@@ -99,8 +101,6 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			reverse(prefix_id.begin(), prefix_id.end());
 			const auto pe_id = Value::UBIGINT(std::stoull(prefix_id));
 			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
-
-			std::array<Product, 7> product_week;
 
 			for (const auto &cell : row.cells()) {
 				const date_t &date = Date::EpochToDate(cell.timestamp().count() / 1'000'000);
@@ -139,9 +139,11 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 				}
 			}
 
-			for (const auto &product : product_week) {
-				if (product.valid)
+			for (auto &product : product_week) {
+				if (product.valid) {
 					bind_data.remainder.emplace_back(product);
+					product.valid = false;
+				}
 			}
 		}
 	}
@@ -230,6 +232,8 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	auto &bind_data = data.bind_data->CastNoConst<SearchFunctionData>();
 	auto &global_state = data.global_state->Cast<SearchGlobalState>();
 
+	vector<Keyword> keyword_week(200 * 7 * 24);
+
 	while (!bind_data.ranges.empty() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
 		const auto range = bind_data.ranges[0];
 		bind_data.ranges.erase(bind_data.ranges.begin());
@@ -247,8 +251,6 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			reverse(prefix_id.begin(), prefix_id.end());
 			const auto keyword_id = Value::UINTEGER(std::stoull(prefix_id));
 			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
-
-			vector<Keyword> keyword_week(200 * 7 * 24);
 
 			for (const auto &cell : row.cells()) {
 				const int32_t position = std::stoul(cell.column_qualifier());
@@ -283,9 +285,11 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				}
 			}
 
-			for (const auto &keyword : keyword_week) {
-				if (keyword.valid)
+			for (auto &keyword : keyword_week) {
+				if (keyword.valid) {
 					bind_data.remainder.emplace_back(keyword);
+					keyword.valid = false;
+				}
 			}
 		}
 	}
