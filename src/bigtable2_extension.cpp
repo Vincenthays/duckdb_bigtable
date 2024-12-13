@@ -142,15 +142,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			for (auto &product : product_week) {
 				if (product.valid) {
 					bind_data.remainder.emplace_back(product);
-					product.valid = false;
-					product.price = Value();
-					product.base_price = Value();
-					product.unit_price = Value();
-					product.promo_id = Value();
-					product.promo_text = Value();
-					product.shelf.clear();
-					product.position.clear();
-					product.is_paid.clear();
+					product = Product();
 				}
 			}
 		}
@@ -296,10 +288,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			for (auto &keyword : keyword_week) {
 				if (keyword.valid) {
 					bind_data.remainder.emplace_back(keyword);
-					keyword.is_paid = false;
-					keyword.position = Value();
-					keyword.pe_id = Value();
-					keyword.retailer_p_id = Value();
+					keyword = Keyword();
 				}
 			}
 		}
