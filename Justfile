@@ -25,6 +25,9 @@ deploy:
 
 debug:
     VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make debug
+
+release:
+    VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make
     
 test:
     just run "FROM product(2024_20, 2024_20, [1124000100000])"
@@ -33,5 +36,5 @@ test:
 run args:
     ./build/debug/duckdb -c "{{args}}"
 
-bench:
-    time just run "FROM search(2024_45, 2024_45, [98334])"
+bench: release
+    time ./build/release/duckdb -c "FROM search(2024_45, 2024_45, [98334])"
