@@ -83,8 +83,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	auto &global_state = data.global_state->Cast<ProductGlobalState>();
 
 	while (!bind_data.ranges.empty() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
-
-		const auto range = bind_data.ranges[0];
+		const auto &range = bind_data.ranges[0];
 		bind_data.ranges.erase(bind_data.ranges.begin());
 
 		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
@@ -151,7 +150,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 	while(bind_data.remainder_idx < bind_data.remainder.size()) {
 		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
-		
+
 		output.SetValue(0, cardinality, day.pe_id);
 		output.SetValue(1, cardinality, day.shop_id);
 		output.SetValue(2, cardinality, day.date);
@@ -232,8 +231,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	auto &global_state = data.global_state->Cast<SearchGlobalState>();
 
 	while (!bind_data.ranges.empty() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
-
-		const auto range = bind_data.ranges[0];
+		const auto &range = bind_data.ranges[0];
 		bind_data.ranges.erase(bind_data.ranges.begin());
 
 		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
