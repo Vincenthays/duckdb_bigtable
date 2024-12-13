@@ -169,6 +169,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 		}
 	}
 
+	bind_data.remainder_idx = 0;
 	bind_data.remainder.clear();
 	output.SetCardinality(cardinality);
 }
@@ -309,6 +310,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 		}
 	}
 
+	bind_data.remainder_idx = 0;
 	bind_data.remainder.clear();
 	output.SetCardinality(cardinality);
 }
