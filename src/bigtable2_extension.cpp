@@ -103,8 +103,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			std::array<Product, 7> product_week;
 
 			for (const auto &cell : row.cells()) {
-				const date_t date = Date::EpochToDate(cell.timestamp().count() / 1'000'000);
-				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
+				const date_t &date = Date::EpochToDate(cell.timestamp().count() / 1'000'000);
+				const int32_t &weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 
 				auto &product_day = product_week[weekday];
 				product_day.valid = true;
@@ -257,11 +257,11 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 					continue;
 
 				const timestamp_t timestamp = Timestamp::FromEpochMicroSeconds(cell.timestamp().count());
-				const date_t date = Timestamp::GetDate(timestamp);
-				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
-				const int32_t hour = Timestamp::GetTime(timestamp).micros / 3'600'000'000;
-				const int32_t week_hour = weekday * 24 + hour;
-				const int32_t index = 200 * week_hour + position - 1;
+				const date_t &date = Timestamp::GetDate(timestamp);
+				const int32_t &weekday = Date::ExtractISODayOfTheWeek(date) - 1;
+				const int32_t &hour = Timestamp::GetTime(timestamp).micros / 3'600'000'000;
+				const int32_t &week_hour = weekday * 24 + hour;
+				const int32_t &index = 200 * week_hour + position - 1;
 
 				auto &keyword_day = keyword_week[index];
 				keyword_day.valid = true;
