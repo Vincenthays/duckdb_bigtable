@@ -85,7 +85,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 	std::array<Product, 7> product_week;
 
-	while (bind_data.ranges_idx < bind_data.ranges.size() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
+	while (bind_data.ranges_idx < bind_data.ranges.size() && bind_data.remainder.size() - bind_data.remainder_idx < STANDARD_VECTOR_SIZE) {
 		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
 
 		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
@@ -234,7 +234,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 	vector<Keyword> keyword_week(200 * 7 * 24);
 
-	while (bind_data.ranges_idx < bind_data.ranges.size() && bind_data.remainder.size() < STANDARD_VECTOR_SIZE) {
+	while (bind_data.ranges_idx < bind_data.ranges.size() && bind_data.remainder.size() - bind_data.remainder_idx < STANDARD_VECTOR_SIZE) {
 		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
 
 		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
