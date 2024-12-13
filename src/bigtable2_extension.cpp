@@ -171,7 +171,6 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 		}
 	}
 
-	bind_data.remainder.clear();
 	output.SetCardinality(cardinality);
 }
 
@@ -253,7 +252,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
 
 			for (const auto &cell : row.cells()) {
-				const int32_t position = std::stoul(cell.column_qualifier());
+				const int32_t &position = std::stoul(cell.column_qualifier());
 
 				if (position > 200 || cell.value().starts_with("id_ret_pos_"))
 					continue;
@@ -313,7 +312,6 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 		}
 	}
 
-	bind_data.remainder.clear();
 	output.SetCardinality(cardinality);
 }
 
