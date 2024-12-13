@@ -63,11 +63,10 @@ static unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, Tabl
 	                LogicalType::LIST(LogicalType::BOOLEAN)};
 
 	auto bind_data = make_uniq<ProductFunctionData>();
-	// Extract and process parameters
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
 	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
-
 	const auto ls_pe_id = ListValue::GetChildren(input.inputs[2]);
+
 	for (const auto &pe_id : ls_pe_id) {
 		string prefix_id = std::to_string(BigIntValue::Get(pe_id));
 		reverse(prefix_id.begin(), prefix_id.end());
@@ -213,11 +212,10 @@ static unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, Table
 	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
 
 	auto bind_data = make_uniq<SearchFunctionData>();
-	// Extract and process parameters
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
 	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
-
 	const auto ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
+
 	for (const auto &keyword_id : ls_keyword_id) {
 		string prefix_id = std::to_string(IntegerValue::Get(keyword_id));
 		reverse(prefix_id.begin(), prefix_id.end());
