@@ -78,8 +78,8 @@ DUCKDB_EXTENSION_API unique_ptr<FunctionData> ProductFunctionBind(ClientContext 
 
 DUCKDB_EXTENSION_API void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = cbt::Filter::PassAllFilter();
-	auto &bind_data = data.bind_data->CastNoConst<ProductFunctionData>();
 	auto &global_state = data.global_state->Cast<ProductGlobalState>();
+	auto &bind_data = data.bind_data->CastNoConst<ProductFunctionData>();
 
 	std::array<Product, 7> product_week;
 

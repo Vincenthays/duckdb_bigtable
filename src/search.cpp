@@ -64,8 +64,8 @@ DUCKDB_EXTENSION_API unique_ptr<FunctionData> SearchFunctionBind(ClientContext &
 
 DUCKDB_EXTENSION_API void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = cbt::Filter::PassAllFilter();
+    auto &global_state = data.global_state->Cast<SearchGlobalState>();
 	auto &bind_data = data.bind_data->CastNoConst<SearchFunctionData>();
-	auto &global_state = data.global_state->Cast<SearchGlobalState>();
 
 	vector<Keyword> keyword_week(200 * 7 * 24);
 
