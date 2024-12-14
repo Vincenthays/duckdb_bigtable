@@ -170,8 +170,6 @@ DUCKDB_EXTENSION_API void ProductFunction(ClientContext &context, TableFunctionI
 		}
 	}
 
-	bind_data.remainder_idx = 0;
-	bind_data.remainder.clear();
 	output.SetCardinality(cardinality);
 }
 } // namespace duckdb
