@@ -3,14 +3,16 @@
 #include "duckdb/main/extension_util.hpp"
 #include <google/cloud/bigtable/table.h>
 
+using ::google::cloud::GrpcNumChannelsOption;
+using ::google::cloud::Options;
 using ::google::cloud::StatusOr;
 namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
 struct SearchGlobalState : GlobalTableFunctionState {
-	cbt::Table table =
-	    cbt::Table(cbt::MakeDataConnection(), cbt::TableResource("dataimpact-processing", "processing", "search"));
+	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
+	                              cbt::TableResource("dataimpact-processing", "processing", "search"));
 };
 
 DUCKDB_EXTENSION_API unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context,
