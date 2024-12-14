@@ -9,15 +9,13 @@ namespace cbt = ::google::cloud::bigtable;
 namespace duckdb {
 
 struct ProductGlobalState : GlobalTableFunctionState {
-	shared_ptr<cbt::Table> table;
+	cbt::Table table =
+	    cbt::Table(cbt::MakeDataConnection(), cbt::TableResource("dataimpact-processing", "processing", "product"));
 };
 
 DUCKDB_EXTENSION_API unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context,
                                                                             TableFunctionInitInput &input) {
-	auto global_state = make_uniq<ProductGlobalState>();
-	global_state->table = make_shared_ptr<cbt::Table>(
-	    cbt::MakeDataConnection(), cbt::TableResource("dataimpact-processing", "processing", "product"));
-	return std::move(global_state);
+	return make_uniq<ProductGlobalState>();
 }
 
 struct Product {
@@ -87,7 +85,7 @@ DUCKDB_EXTENSION_API void ProductFunction(ClientContext &context, TableFunctionI
 	       (bind_data.remainder.size() - bind_data.remainder_idx) < STANDARD_VECTOR_SIZE) {
 		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
 
-		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
+		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, filter)) {
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
 

@@ -9,15 +9,13 @@ namespace cbt = ::google::cloud::bigtable;
 namespace duckdb {
 
 struct SearchGlobalState : GlobalTableFunctionState {
-	shared_ptr<cbt::Table> table;
+	cbt::Table table =
+	    cbt::Table(cbt::MakeDataConnection(), cbt::TableResource("dataimpact-processing", "processing", "search"));
 };
 
 DUCKDB_EXTENSION_API unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context,
                                                                            TableFunctionInitInput &input) {
-	auto global_state = make_uniq<SearchGlobalState>();
-	global_state->table = make_shared_ptr<cbt::Table>(
-	    cbt::MakeDataConnection(), cbt::TableResource("dataimpact-processing", "processing", "search"));
-	return std::move(global_state);
+	return make_uniq<SearchGlobalState>();
 }
 
 struct Keyword {
@@ -64,7 +62,7 @@ DUCKDB_EXTENSION_API unique_ptr<FunctionData> SearchFunctionBind(ClientContext &
 
 DUCKDB_EXTENSION_API void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = cbt::Filter::PassAllFilter();
-    auto &global_state = data.global_state->Cast<SearchGlobalState>();
+	auto &global_state = data.global_state->Cast<SearchGlobalState>();
 	auto &bind_data = data.bind_data->CastNoConst<SearchFunctionData>();
 
 	vector<Keyword> keyword_week(200 * 7 * 24);
@@ -73,7 +71,7 @@ DUCKDB_EXTENSION_API void SearchFunction(ClientContext &context, TableFunctionIn
 	       (bind_data.remainder.size() - bind_data.remainder_idx) < STANDARD_VECTOR_SIZE) {
 		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
 
-		for (StatusOr<cbt::Row> &row_result : global_state.table->ReadRows(range, filter)) {
+		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, filter)) {
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
 
