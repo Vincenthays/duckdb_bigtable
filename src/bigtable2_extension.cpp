@@ -6,10 +6,6 @@
 #include "duckdb.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension_util.hpp"
-#include <google/cloud/bigtable/table.h>
-
-using ::google::cloud::StatusOr;
-namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
