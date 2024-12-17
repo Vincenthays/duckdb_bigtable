@@ -13,15 +13,13 @@ static void LoadInternal(DatabaseInstance &db) {
 	TableFunction product("product",
 	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
 	                      ProductFunction, ProductFunctionBind, ProductInitGlobal);
-	// product.projection_pushdown = true;
-	// product.filter_pushdown = true;
+	product.projection_pushdown = true;
 	ExtensionUtil::RegisterFunction(db, product);
 
 	TableFunction search("search",
 	                     {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
 	                     SearchFunction, SearchFunctionBind, SearchInitGlobal);
-	// product.projection_pushdown = true;
-	// product.filter_pushdown = true;
+ 	search.projection_pushdown = true;
 	ExtensionUtil::RegisterFunction(db, search);
 }
 

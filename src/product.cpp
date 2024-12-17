@@ -10,42 +10,6 @@ namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
-struct ProductGlobalState : GlobalTableFunctionState {
-	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
-	                              cbt::TableResource("dataimpact-processing", "processing", "product"));
-};
-
-unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
-	// if (input.filters->filters.empty())
-	// 	throw std::runtime_error("You must filter on pe_id");
-
-	// for (const auto &[column_id, filter] : input.filters->filters) {
-	// 	switch (filter->filter_type) {
-	// 	case TableFilterType::CONSTANT_COMPARISON:
-	// 		std::cout << "CONSTANT_COMPARISON" << std::endl;
-	// 		break;
-	// 	case TableFilterType::IS_NULL:
-	// 		std::cout << "IS_NULL" << std::endl;
-	// 		break;
-	// 	case TableFilterType::IS_NOT_NULL:
-	// 		std::cout << "IS_NOT_NULL" << std::endl;
-	// 		break;
-	// 	case TableFilterType::CONJUNCTION_OR:
-	// 		std::cout << "CONJUNCTION_OR" << std::endl;
-	// 		break;
-	// 	case TableFilterType::CONJUNCTION_AND:
-	// 		auto &filter_conjuction_and = filter->Cast<ConjunctionAndFilter>();
-	// 		std::cout << "CONJUNCTION_AND: " << filter_conjuction_and.ToString("pe_id") << std::endl;
-	// 		break;
-	// 	case TableFilterType::STRUCT_EXTRACT:
-	// 		std::cout << "STRUCT_EXTRACT" << std::endl;
-	// 		break;
-	// 	}
-	// }
-
-	return make_uniq<ProductGlobalState>();
-}
-
 struct Product {
 	bool valid = false;
 	Value pe_id;
@@ -62,6 +26,8 @@ struct Product {
 };
 
 struct ProductFunctionData : TableFunctionData {
+	vector<column_t> column_ids;
+
 	idx_t ranges_idx = 0;
 	vector<cbt::RowRange> ranges;
 
@@ -99,6 +65,17 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 	}
 
 	return std::move(bind_data);
+}
+
+struct ProductGlobalState : GlobalTableFunctionState {
+	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
+	                              cbt::TableResource("dataimpact-processing", "processing", "product"));
+};
+
+unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
+	auto &bind_data = input.bind_data->CastNoConst<ProductFunctionData>();
+	bind_data.column_ids = input.column_ids;
+	return make_uniq<ProductGlobalState>();
 }
 
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
@@ -175,19 +152,46 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	idx_t cardinality = 0;
 
 	while (bind_data.remainder_idx < bind_data.remainder.size()) {
+		idx_t column_id = 0;
 		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
 
-		output.SetValue(0, cardinality, day.pe_id);
-		output.SetValue(1, cardinality, day.shop_id);
-		output.SetValue(2, cardinality, day.date);
-		output.SetValue(3, cardinality, day.price);
-		output.SetValue(4, cardinality, day.base_price);
-		output.SetValue(5, cardinality, day.unit_price);
-		output.SetValue(6, cardinality, day.promo_id);
-		output.SetValue(7, cardinality, day.promo_text);
-		output.SetValue(8, cardinality, Value::LIST(day.shelf));
-		output.SetValue(9, cardinality, Value::LIST(day.position));
-		output.SetValue(10, cardinality, Value::LIST(day.is_paid));
+		for (const auto &i : bind_data.column_ids) {
+			switch (i) {
+			case 0:
+				output.SetValue(column_id++, cardinality, day.pe_id);
+				break;
+			case 1:
+				output.SetValue(column_id++, cardinality, day.shop_id);
+				break;
+			case 2:
+				output.SetValue(column_id++, cardinality, day.date);
+				break;
+			case 3:
+				output.SetValue(column_id++, cardinality, day.price);
+				break;
+			case 4:
+				output.SetValue(column_id++, cardinality, day.base_price);
+				break;
+			case 5:
+				output.SetValue(column_id++, cardinality, day.unit_price);
+				break;
+			case 6:
+				output.SetValue(column_id++, cardinality, day.promo_id);
+				break;
+			case 7:
+				output.SetValue(column_id++, cardinality, day.promo_text);
+				break;
+			case 8:
+				output.SetValue(column_id++, cardinality, Value::LIST(day.shelf));
+				break;
+			case 9:
+				output.SetValue(column_id++, cardinality, Value::LIST(day.position));
+				break;
+			case 10:
+				output.SetValue(column_id++, cardinality, Value::LIST(day.is_paid));
+				break;
+			}
+		}
 
 		if (++cardinality == STANDARD_VECTOR_SIZE) {
 			output.SetCardinality(cardinality);

@@ -10,15 +10,6 @@ namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
-struct SearchGlobalState : GlobalTableFunctionState {
-	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
-	                              cbt::TableResource("dataimpact-processing", "processing", "search"));
-};
-
-unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
-	return make_uniq<SearchGlobalState>();
-}
-
 struct Keyword {
 	bool valid = false;
 	Value keyword_id;
@@ -31,6 +22,8 @@ struct Keyword {
 };
 
 struct SearchFunctionData : TableFunctionData {
+	vector<column_t> column_ids;
+
 	id_t ranges_idx = 0;
 	vector<cbt::RowRange> ranges;
 
@@ -58,6 +51,17 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 	}
 
 	return std::move(bind_data);
+}
+
+struct SearchGlobalState : GlobalTableFunctionState {
+	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
+	                              cbt::TableResource("dataimpact-processing", "processing", "search"));
+};
+
+unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
+	auto &bind_data = input.bind_data->CastNoConst<SearchFunctionData>();
+	bind_data.column_ids = input.column_ids;
+	return make_uniq<SearchGlobalState>();
 }
 
 void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
@@ -129,15 +133,34 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	idx_t cardinality = 0;
 
 	while (bind_data.remainder_idx < bind_data.remainder.size()) {
+		idx_t column_id = 0;
 		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
 
-		output.SetValue(0, cardinality, day.keyword_id);
-		output.SetValue(1, cardinality, day.shop_id);
-		output.SetValue(2, cardinality, day.date);
-		output.SetValue(3, cardinality, day.position);
-		output.SetValue(4, cardinality, day.pe_id);
-		output.SetValue(5, cardinality, day.retailer_p_id);
-		output.SetValue(6, cardinality, day.is_paid);
+		for (const auto &i : bind_data.column_ids) {
+			switch (i) {
+			case 0:
+				output.SetValue(column_id++, cardinality, day.keyword_id);
+				break;
+			case 1:
+				output.SetValue(column_id++, cardinality, day.shop_id);
+				break;
+			case 2:
+				output.SetValue(column_id++, cardinality, day.date);
+				break;
+			case 3:
+				output.SetValue(column_id++, cardinality, day.position);
+				break;
+			case 4:
+				output.SetValue(column_id++, cardinality, day.pe_id);
+				break;
+			case 5:
+				output.SetValue(column_id++, cardinality, day.retailer_p_id);
+				break;
+			case 6:
+				output.SetValue(column_id++, cardinality, day.is_paid);
+				break;
+			}
+		}
 
 		if (++cardinality == STANDARD_VECTOR_SIZE) {
 			output.SetCardinality(cardinality);
