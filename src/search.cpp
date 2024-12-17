@@ -22,8 +22,6 @@ struct Keyword {
 };
 
 struct SearchFunctionData : TableFunctionData {
-	vector<column_t> column_ids;
-
 	id_t ranges_idx = 0;
 	vector<cbt::RowRange> ranges;
 
@@ -54,14 +52,15 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 }
 
 struct SearchGlobalState : GlobalTableFunctionState {
+	vector<column_t> column_ids;
 	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
 	                              cbt::TableResource("dataimpact-processing", "processing", "search"));
 };
 
 unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
-	auto &bind_data = input.bind_data->CastNoConst<SearchFunctionData>();
-	bind_data.column_ids = input.column_ids;
-	return make_uniq<SearchGlobalState>();
+	auto global_state = make_uniq<SearchGlobalState>();
+	global_state->column_ids = input.column_ids;
+	return std::move(global_state);
 }
 
 void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
@@ -135,8 +134,8 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	while (bind_data.remainder_idx < bind_data.remainder.size()) {
 		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
 
-		for (idx_t i = 0; i < bind_data.column_ids.size(); i++) {
-			switch (bind_data.column_ids[i]) {
+		for (idx_t i = 0; i < global_state.column_ids.size(); i++) {
+			switch (global_state.column_ids[i]) {
 			case 0:
 				output.SetValue(i, cardinality, day.keyword_id);
 				break;
