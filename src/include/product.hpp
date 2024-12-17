@@ -1,6 +1,9 @@
 #pragma once
 
 #include "duckdb.hpp"
+#include <google/cloud/bigtable/table.h>
+
+namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
@@ -9,4 +12,5 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input);
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output);
 
+cbt::Filter ProductFilter(const vector<column_t> &column_ids);
 } // namespace duckdb

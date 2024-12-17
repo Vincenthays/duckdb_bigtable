@@ -1,4 +1,5 @@
 #include "duckdb.hpp"
+#include "search.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <google/cloud/bigtable/table.h>
@@ -53,6 +54,7 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 
 struct SearchGlobalState : GlobalTableFunctionState {
 	vector<column_t> column_ids;
+	cbt::Filter filter = cbt::Filter::PassAllFilter();
 	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
 	                              cbt::TableResource("dataimpact-processing", "processing", "search"));
 };
@@ -60,6 +62,7 @@ struct SearchGlobalState : GlobalTableFunctionState {
 unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
 	auto global_state = make_uniq<SearchGlobalState>();
 	global_state->column_ids = input.column_ids;
+	global_state->filter = SearchFilter(input.column_ids);
 	return std::move(global_state);
 }
 
@@ -74,7 +77,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	       (bind_data.remainder.size() - bind_data.remainder_idx) < STANDARD_VECTOR_SIZE) {
 		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
 
-		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, filter)) {
+		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, global_state.filter)) {
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
 
@@ -167,5 +170,31 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	}
 
 	output.SetCardinality(cardinality);
+}
+
+cbt::Filter SearchFilter(const vector<column_t> &column_ids) {
+	vector<cbt::Filter> filters;
+
+	for (const auto &column_id : column_ids) {
+		switch (column_id) {
+		case 3:
+		case 4:
+		case 5:
+			filters.emplace_back(cbt::Filter::FamilyRegex("p"));
+			break;
+		case 6:
+			filters.emplace_back(cbt::Filter::FamilyRegex("s"));
+			break;
+		}
+	}
+
+	switch (filters.size()) {
+	case 1:
+		return filters[0];
+	case 2:
+		return cbt::Filter::Interleave(filters[0], filters[1]);
+	default:
+		return cbt::Filter::PassAllFilter();
+	}
 }
 } // namespace duckdb

@@ -1,4 +1,5 @@
 #include "duckdb.hpp"
+#include "product.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <google/cloud/bigtable/table.h>
@@ -69,6 +70,7 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 
 struct ProductGlobalState : GlobalTableFunctionState {
 	vector<column_t> column_ids;
+	cbt::Filter filter = cbt::Filter::PassAllFilter();
 	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
 	                              cbt::TableResource("dataimpact-processing", "processing", "product"));
 };
@@ -76,11 +78,11 @@ struct ProductGlobalState : GlobalTableFunctionState {
 unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
 	auto global_state = make_uniq<ProductGlobalState>();
 	global_state->column_ids = input.column_ids;
+	global_state->filter = ProductFilter(input.column_ids);
 	return std::move(global_state);
 }
 
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
-	const auto filter = cbt::Filter::PassAllFilter();
 	auto &global_state = data.global_state->Cast<ProductGlobalState>();
 	auto &bind_data = data.bind_data->CastNoConst<ProductFunctionData>();
 
@@ -90,7 +92,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	       (bind_data.remainder.size() - bind_data.remainder_idx) < STANDARD_VECTOR_SIZE) {
 		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
 
-		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, filter)) {
+		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, global_state.filter)) {
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
 
@@ -200,5 +202,39 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	}
 
 	output.SetCardinality(cardinality);
+}
+
+cbt::Filter ProductFilter(const vector<column_t> &column_ids) {
+	vector<cbt::Filter> filters;
+
+	for (const auto &column_id : column_ids) {
+		switch (column_id) {
+		case 3:
+		case 4:
+		case 5:
+			filters.emplace_back(cbt::Filter::FamilyRegex("p"));
+			break;
+		case 6:
+		case 7:
+			filters.emplace_back(cbt::Filter::FamilyRegex("d"));
+			break;
+		case 8:
+		case 9:
+		case 10:
+			filters.emplace_back(cbt::Filter::FamilyRegex("s|S"));
+			break;
+		}
+	}
+
+	switch (filters.size()) {
+	case 1:
+		return filters[0];
+	case 2:
+		return cbt::Filter::Interleave(filters[0], filters[1]);
+	case 3:
+		return cbt::Filter::Interleave(filters[0], filters[1], filters[2]);
+	default:
+		return cbt::Filter::PassAllFilter();
+	}
 }
 } // namespace duckdb
