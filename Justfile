@@ -42,3 +42,4 @@ bench: release
 
 test_filter_pushdown: debug
     ./build/debug/duckdb --init '' -c "SELECT pe_id, price FROM product(2024_20, 2024_20, [1124000100000])"
+    ./build/debug/duckdb --init '' -c "FROM product(2024_20, 2024_20, [1124000100000])"
