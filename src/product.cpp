@@ -15,8 +15,34 @@ struct ProductGlobalState : GlobalTableFunctionState {
 	                              cbt::TableResource("dataimpact-processing", "processing", "product"));
 };
 
-DUCKDB_EXTENSION_API unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context,
-                                                                            TableFunctionInitInput &input) {
+unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
+	// if (input.filters->filters.empty())
+	// 	throw std::runtime_error("You must filter on pe_id");
+
+	// for (const auto &[column_id, filter] : input.filters->filters) {
+	// 	switch (filter->filter_type) {
+	// 	case TableFilterType::CONSTANT_COMPARISON:
+	// 		std::cout << "CONSTANT_COMPARISON" << std::endl;
+	// 		break;
+	// 	case TableFilterType::IS_NULL:
+	// 		std::cout << "IS_NULL" << std::endl;
+	// 		break;
+	// 	case TableFilterType::IS_NOT_NULL:
+	// 		std::cout << "IS_NOT_NULL" << std::endl;
+	// 		break;
+	// 	case TableFilterType::CONJUNCTION_OR:
+	// 		std::cout << "CONJUNCTION_OR" << std::endl;
+	// 		break;
+	// 	case TableFilterType::CONJUNCTION_AND:
+	// 		auto &filter_conjuction_and = filter->Cast<ConjunctionAndFilter>();
+	// 		std::cout << "CONJUNCTION_AND: " << filter_conjuction_and.ToString("pe_id") << std::endl;
+	// 		break;
+	// 	case TableFilterType::STRUCT_EXTRACT:
+	// 		std::cout << "STRUCT_EXTRACT" << std::endl;
+	// 		break;
+	// 	}
+	// }
+
 	return make_uniq<ProductGlobalState>();
 }
 
@@ -43,9 +69,8 @@ struct ProductFunctionData : TableFunctionData {
 	vector<Product> remainder;
 };
 
-DUCKDB_EXTENSION_API unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
-                                                                  vector<LogicalType> &return_types,
-                                                                  vector<string> &names) {
+unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
+                                             vector<LogicalType> &return_types, vector<string> &names) {
 	names = {"pe_id",    "shop_id",    "date",  "price",    "base_price", "unit_price",
 	         "promo_id", "promo_text", "shelf", "position", "is_paid"};
 
@@ -76,7 +101,7 @@ DUCKDB_EXTENSION_API unique_ptr<FunctionData> ProductFunctionBind(ClientContext 
 	return std::move(bind_data);
 }
 
-DUCKDB_EXTENSION_API void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
+void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = cbt::Filter::PassAllFilter();
 	auto &global_state = data.global_state->Cast<ProductGlobalState>();
 	auto &bind_data = data.bind_data->CastNoConst<ProductFunctionData>();

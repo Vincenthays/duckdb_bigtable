@@ -15,8 +15,7 @@ struct SearchGlobalState : GlobalTableFunctionState {
 	                              cbt::TableResource("dataimpact-processing", "processing", "search"));
 };
 
-DUCKDB_EXTENSION_API unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context,
-                                                                           TableFunctionInitInput &input) {
+unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
 	return make_uniq<SearchGlobalState>();
 }
 
@@ -39,9 +38,8 @@ struct SearchFunctionData : TableFunctionData {
 	vector<Keyword> remainder;
 };
 
-DUCKDB_EXTENSION_API unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctionBindInput &input,
-                                                                 vector<LogicalType> &return_types,
-                                                                 vector<string> &names) {
+unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctionBindInput &input,
+                                            vector<LogicalType> &return_types, vector<string> &names) {
 	names = {"keyword_id", "shop_id", "date", "position", "pe_id", "retailer_p_id", "is_paid"};
 
 	return_types = {LogicalType::UINTEGER, LogicalType::UINTEGER, LogicalType::TIMESTAMP_S, LogicalType::UTINYINT,
@@ -62,7 +60,7 @@ DUCKDB_EXTENSION_API unique_ptr<FunctionData> SearchFunctionBind(ClientContext &
 	return std::move(bind_data);
 }
 
-DUCKDB_EXTENSION_API void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
+void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	const auto filter = cbt::Filter::PassAllFilter();
 	auto &global_state = data.global_state->Cast<SearchGlobalState>();
 	auto &bind_data = data.bind_data->CastNoConst<SearchFunctionData>();
