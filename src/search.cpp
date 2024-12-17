@@ -191,8 +191,6 @@ cbt::Filter SearchFilter(const vector<column_t> &column_ids) {
 	switch (filters.size()) {
 	case 1:
 		return filters[0];
-	case 2:
-		return cbt::Filter::Interleave(filters[0], filters[1]);
 	default:
 		return cbt::Filter::PassAllFilter();
 	}

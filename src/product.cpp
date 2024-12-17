@@ -231,8 +231,6 @@ cbt::Filter ProductFilter(const vector<column_t> &column_ids) {
 		return filters[0];
 	case 2:
 		return cbt::Filter::Interleave(filters[0], filters[1]);
-	case 3:
-		return cbt::Filter::Interleave(filters[0], filters[1], filters[2]);
 	default:
 		return cbt::Filter::PassAllFilter();
 	}
