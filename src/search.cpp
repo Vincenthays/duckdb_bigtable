@@ -133,31 +133,30 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	idx_t cardinality = 0;
 
 	while (bind_data.remainder_idx < bind_data.remainder.size()) {
-		idx_t column_id = 0;
 		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
 
-		for (const auto &i : bind_data.column_ids) {
-			switch (i) {
+		for (idx_t i = 0; i < bind_data.column_ids.size(); i++) {
+			switch (bind_data.column_ids[i]) {
 			case 0:
-				output.SetValue(column_id++, cardinality, day.keyword_id);
+				output.SetValue(i, cardinality, day.keyword_id);
 				break;
 			case 1:
-				output.SetValue(column_id++, cardinality, day.shop_id);
+				output.SetValue(i, cardinality, day.shop_id);
 				break;
 			case 2:
-				output.SetValue(column_id++, cardinality, day.date);
+				output.SetValue(i, cardinality, day.date);
 				break;
 			case 3:
-				output.SetValue(column_id++, cardinality, day.position);
+				output.SetValue(i, cardinality, day.position);
 				break;
 			case 4:
-				output.SetValue(column_id++, cardinality, day.pe_id);
+				output.SetValue(i, cardinality, day.pe_id);
 				break;
 			case 5:
-				output.SetValue(column_id++, cardinality, day.retailer_p_id);
+				output.SetValue(i, cardinality, day.retailer_p_id);
 				break;
 			case 6:
-				output.SetValue(column_id++, cardinality, day.is_paid);
+				output.SetValue(i, cardinality, day.is_paid);
 				break;
 			}
 		}

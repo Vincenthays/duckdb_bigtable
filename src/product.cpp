@@ -152,43 +152,42 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	idx_t cardinality = 0;
 
 	while (bind_data.remainder_idx < bind_data.remainder.size()) {
-		idx_t column_id = 0;
 		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
 
-		for (const auto &i : bind_data.column_ids) {
-			switch (i) {
+		for (idx_t i = 0; i < bind_data.column_ids.size(); i++) {
+			switch (bind_data.column_ids[i]) {
 			case 0:
-				output.SetValue(column_id++, cardinality, day.pe_id);
+				output.SetValue(i, cardinality, day.pe_id);
 				break;
 			case 1:
-				output.SetValue(column_id++, cardinality, day.shop_id);
+				output.SetValue(i, cardinality, day.shop_id);
 				break;
 			case 2:
-				output.SetValue(column_id++, cardinality, day.date);
+				output.SetValue(i, cardinality, day.date);
 				break;
 			case 3:
-				output.SetValue(column_id++, cardinality, day.price);
+				output.SetValue(i, cardinality, day.price);
 				break;
 			case 4:
-				output.SetValue(column_id++, cardinality, day.base_price);
+				output.SetValue(i, cardinality, day.base_price);
 				break;
 			case 5:
-				output.SetValue(column_id++, cardinality, day.unit_price);
+				output.SetValue(i, cardinality, day.unit_price);
 				break;
 			case 6:
-				output.SetValue(column_id++, cardinality, day.promo_id);
+				output.SetValue(i, cardinality, day.promo_id);
 				break;
 			case 7:
-				output.SetValue(column_id++, cardinality, day.promo_text);
+				output.SetValue(i, cardinality, day.promo_text);
 				break;
 			case 8:
-				output.SetValue(column_id++, cardinality, Value::LIST(day.shelf));
+				output.SetValue(i, cardinality, Value::LIST(day.shelf));
 				break;
 			case 9:
-				output.SetValue(column_id++, cardinality, Value::LIST(day.position));
+				output.SetValue(i, cardinality, Value::LIST(day.position));
 				break;
 			case 10:
-				output.SetValue(column_id++, cardinality, Value::LIST(day.is_paid));
+				output.SetValue(i, cardinality, Value::LIST(day.is_paid));
 				break;
 			}
 		}
