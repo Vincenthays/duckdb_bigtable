@@ -116,6 +116,9 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 				product_day.shop_id = shop_id;
 				product_day.date = Value::DATE(date);
 
+				if (global_state.filter == cbt::Filter::StripValueTransformer())
+					continue;
+
 				switch (cell.family_name()[0]) {
 				case 'p':
 					switch (cell.column_qualifier()[0]) {
@@ -205,34 +208,38 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 }
 
 cbt::Filter ProductFilter(const vector<column_t> &column_ids) {
-	vector<cbt::Filter> filters;
+	set<string> filters_cf;
 
 	for (const auto &column_id : column_ids) {
 		switch (column_id) {
 		case 3:
 		case 4:
 		case 5:
-			filters.emplace_back(cbt::Filter::FamilyRegex("p"));
+			filters_cf.emplace("p");
 			break;
 		case 6:
 		case 7:
-			filters.emplace_back(cbt::Filter::FamilyRegex("d"));
+			filters_cf.emplace("d");
 			break;
 		case 8:
 		case 9:
 		case 10:
-			filters.emplace_back(cbt::Filter::FamilyRegex("s|S"));
+			filters_cf.emplace("s|S");
 			break;
 		}
 	}
 
+	vector<string> filters(filters_cf.begin(), filters_cf.end());
+
 	switch (filters.size()) {
 	case 1:
-		return filters[0];
+		return cbt::Filter::FamilyRegex(filters[0]);
 	case 2:
-		return cbt::Filter::Interleave(filters[0], filters[1]);
-	default:
+		return cbt::Filter::Interleave(cbt::Filter::FamilyRegex(filters[0]), cbt::Filter::FamilyRegex(filters[1]));
+	case 3:
 		return cbt::Filter::PassAllFilter();
+	default:
+		return cbt::Filter::StripValueTransformer();
 	}
 }
 } // namespace duckdb
