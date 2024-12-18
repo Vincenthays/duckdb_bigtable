@@ -110,6 +110,9 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				keyword_day.date = Value::TIMESTAMP(timestamp);
 				keyword_day.position = Value::UTINYINT(position);
 
+				if (global_state.filter == cbt::Filter::StripValueTransformer())
+					continue;
+
 				switch (cell.family_name()[0]) {
 				case 'p':
 					if (cell.value().starts_with("id_ret_"))
@@ -173,26 +176,30 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 }
 
 cbt::Filter SearchFilter(const vector<column_t> &column_ids) {
-	vector<cbt::Filter> filters;
+	set<string> filters_cf;
 
 	for (const auto &column_id : column_ids) {
 		switch (column_id) {
 		case 3:
 		case 4:
 		case 5:
-			filters.emplace_back(cbt::Filter::FamilyRegex("p"));
+			filters_cf.emplace("p");
 			break;
 		case 6:
-			filters.emplace_back(cbt::Filter::FamilyRegex("s"));
+			filters_cf.emplace("s");
 			break;
 		}
 	}
 
+	vector<string> filters(filters_cf.begin(), filters_cf.end());
+
 	switch (filters.size()) {
 	case 1:
-		return filters[0];
-	default:
+		return cbt::Filter::FamilyRegex(filters[0]);
+	case 2:
 		return cbt::Filter::PassAllFilter();
+	default:
+		return cbt::Filter::StripValueTransformer();
 	}
 }
 } // namespace duckdb
