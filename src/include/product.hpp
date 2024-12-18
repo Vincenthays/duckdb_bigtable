@@ -17,5 +17,5 @@ unique_ptr<LocalTableFunctionState> ProductInitLocal(ExecutionContext &context, 
 
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output);
 
-cbt::Filter ProductFilter(const vector<column_t> &column_ids);
+static cbt::Filter make_filter(const vector<column_t> &column_ids);
 } // namespace duckdb

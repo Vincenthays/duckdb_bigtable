@@ -82,7 +82,7 @@ struct ProductGlobalState : GlobalTableFunctionState {
 unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
 	auto &bind_data = input.bind_data->Cast<ProductFunctionData>();
 	auto global_state = make_uniq<ProductGlobalState>();
-	global_state->filter = ProductFilter(input.column_ids);
+	global_state->filter = make_filter(input.column_ids);
 	global_state->max_threads = bind_data.ranges.size();
 	global_state->ranges = std::move(bind_data.ranges);
 	global_state->column_ids = std::move(input.column_ids);
@@ -231,7 +231,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	output.SetCardinality(cardinality);
 }
 
-cbt::Filter ProductFilter(const vector<column_t> &column_ids) {
+static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 	set<string> filters;
 
 	for (const auto &column_id : column_ids) {
