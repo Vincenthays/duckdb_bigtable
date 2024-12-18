@@ -12,7 +12,7 @@ namespace duckdb {
 static void LoadInternal(DatabaseInstance &db) {
 	TableFunction product("product",
 	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
-	                      ProductFunction, ProductFunctionBind, ProductInitGlobal);
+	                      ProductFunction, ProductFunctionBind, ProductInitGlobal, ProductInitLocal);
 	product.projection_pushdown = true;
 	ExtensionUtil::RegisterFunction(db, product);
 

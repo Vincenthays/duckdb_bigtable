@@ -27,13 +27,7 @@ struct Product {
 };
 
 struct ProductFunctionData : TableFunctionData {
-	vector<column_t> column_ids;
-
-	idx_t ranges_idx = 0;
 	vector<cbt::RowRange> ranges;
-
-	idx_t remainder_idx = 0;
-	vector<Product> remainder;
 };
 
 unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
@@ -69,28 +63,57 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 }
 
 struct ProductGlobalState : GlobalTableFunctionState {
-	vector<column_t> column_ids;
 	cbt::Filter filter = cbt::Filter::PassAllFilter();
 	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
 	                              cbt::TableResource("dataimpact-processing", "processing", "product"));
+
+	mutex lock;
+	idx_t ranges_idx = 0;
+	vector<cbt::RowRange> ranges;
+	
+	vector<column_t> column_ids;
+
+	idx_t max_threads;
+	idx_t MaxThreads() const override {
+		return max_threads;
+	}
 };
 
 unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
+	auto &bind_data = input.bind_data->Cast<ProductFunctionData>();
 	auto global_state = make_uniq<ProductGlobalState>();
-	global_state->column_ids = input.column_ids;
 	global_state->filter = ProductFilter(input.column_ids);
+	global_state->ranges = bind_data.ranges;
+	global_state->column_ids = input.column_ids;
+	global_state->max_threads = bind_data.ranges.size();
 	return std::move(global_state);
+}
+
+struct ProductLocalState : LocalTableFunctionState {
+	idx_t remainder_idx = 0;
+	vector<Product> remainder;
+};
+
+unique_ptr<LocalTableFunctionState> ProductInitLocal(ExecutionContext &context, TableFunctionInitInput &input,
+                                                     GlobalTableFunctionState *global_state) {
+	auto local_state = make_uniq<ProductLocalState>();
+	return std::move(local_state);
 }
 
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	auto &global_state = data.global_state->Cast<ProductGlobalState>();
-	auto &bind_data = data.bind_data->CastNoConst<ProductFunctionData>();
+	auto &local_state = data.local_state->Cast<ProductLocalState>();
 
 	std::array<Product, 7> product_week;
 
-	while (bind_data.ranges_idx < bind_data.ranges.size() &&
-	       (bind_data.remainder.size() - bind_data.remainder_idx) < STANDARD_VECTOR_SIZE) {
-		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
+	while ((local_state.remainder.size() - local_state.remainder_idx) < STANDARD_VECTOR_SIZE) {
+		global_state.lock.lock();
+		if (global_state.ranges_idx == global_state.ranges.size()) {
+			global_state.lock.unlock();
+			break;
+		}
+		const auto &range = global_state.ranges[global_state.ranges_idx++];
+		global_state.lock.unlock();
 
 		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, global_state.filter)) {
 			if (!row_result)
@@ -148,7 +171,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 			for (auto &product : product_week) {
 				if (product.valid) {
-					bind_data.remainder.emplace_back(product);
+					local_state.remainder.emplace_back(product);
 					product = Product();
 				}
 			}
@@ -157,8 +180,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 	idx_t cardinality = 0;
 
-	while (bind_data.remainder_idx < bind_data.remainder.size()) {
-		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
+	while (local_state.remainder_idx < local_state.remainder.size()) {
+		const auto &day = local_state.remainder[local_state.remainder_idx++];
 
 		for (idx_t i = 0; i < global_state.column_ids.size(); i++) {
 			switch (global_state.column_ids[i]) {
