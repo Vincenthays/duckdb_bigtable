@@ -71,7 +71,7 @@ unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, Ta
 	global_state->filter = SearchFilter(input.column_ids);
 	global_state->max_threads = bind_data.ranges.size();
 	global_state->ranges = std::move(bind_data.ranges);
-	global_state->column_ids = input.column_ids;
+	global_state->column_ids = std::move(input.column_ids);
 	return std::move(global_state);
 }
 
