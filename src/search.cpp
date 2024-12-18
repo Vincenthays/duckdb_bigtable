@@ -50,7 +50,7 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 
 struct SearchGlobalState : GlobalTableFunctionState {
 	cbt::Filter filter = cbt::Filter::PassAllFilter();
-	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
+	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(32)),
 	                              cbt::TableResource("dataimpact-processing", "processing", "search"));
 
 	mutex lock;
