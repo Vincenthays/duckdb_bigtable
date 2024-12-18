@@ -92,6 +92,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	auto &local_state = data.local_state->Cast<SearchLocalState>();
 
 	while ((local_state.remainder.size() - local_state.remainder_idx) < STANDARD_VECTOR_SIZE) {
+		
 		global_state.lock.lock();
 		if (global_state.ranges_idx == global_state.ranges.size()) {
 			global_state.lock.unlock();
