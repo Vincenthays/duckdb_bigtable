@@ -83,9 +83,9 @@ unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, T
 	auto &bind_data = input.bind_data->Cast<ProductFunctionData>();
 	auto global_state = make_uniq<ProductGlobalState>();
 	global_state->filter = ProductFilter(input.column_ids);
-	global_state->ranges = bind_data.ranges;
-	global_state->column_ids = input.column_ids;
 	global_state->max_threads = bind_data.ranges.size();
+	global_state->ranges = std::move(bind_data.ranges);
+	global_state->column_ids = input.column_ids;
 	return std::move(global_state);
 }
 
