@@ -23,11 +23,7 @@ struct Keyword {
 };
 
 struct SearchFunctionData : TableFunctionData {
-	id_t ranges_idx = 0;
 	vector<cbt::RowRange> ranges;
-
-	idx_t remainder_idx = 0;
-	vector<Keyword> remainder;
 };
 
 unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctionBindInput &input,
@@ -53,29 +49,57 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 }
 
 struct SearchGlobalState : GlobalTableFunctionState {
-	vector<column_t> column_ids;
 	cbt::Filter filter = cbt::Filter::PassAllFilter();
 	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(8)),
 	                              cbt::TableResource("dataimpact-processing", "processing", "search"));
+
+	mutex lock;
+	idx_t ranges_idx = 0;
+	vector<cbt::RowRange> ranges;
+	
+	vector<column_t> column_ids;
+
+	idx_t max_threads;
+	idx_t MaxThreads() const override {
+		return max_threads;
+	}
 };
 
 unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
+	auto &bind_data = input.bind_data->Cast<SearchFunctionData>();
 	auto global_state = make_uniq<SearchGlobalState>();
-	global_state->column_ids = input.column_ids;
 	global_state->filter = SearchFilter(input.column_ids);
+	global_state->ranges = bind_data.ranges;
+	global_state->column_ids = input.column_ids;
+	global_state->max_threads = bind_data.ranges.size();
 	return std::move(global_state);
 }
 
+struct SearchLocalState : LocalTableFunctionState {
+	idx_t remainder_idx = 0;
+	vector<Keyword> remainder;
+};
+
+unique_ptr<LocalTableFunctionState> SearchInitLocal(ExecutionContext &context, TableFunctionInitInput &input,
+                                                     GlobalTableFunctionState *global_state) {
+	auto local_state = make_uniq<SearchLocalState>();
+	return std::move(local_state);
+}
+
 void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
-	const auto filter = cbt::Filter::PassAllFilter();
 	auto &global_state = data.global_state->Cast<SearchGlobalState>();
-	auto &bind_data = data.bind_data->CastNoConst<SearchFunctionData>();
+	auto &local_state = data.local_state->Cast<SearchLocalState>();
 
 	vector<Keyword> keyword_week(200 * 7 * 24);
 
-	while (bind_data.ranges_idx < bind_data.ranges.size() &&
-	       (bind_data.remainder.size() - bind_data.remainder_idx) < STANDARD_VECTOR_SIZE) {
-		const auto &range = bind_data.ranges[bind_data.ranges_idx++];
+	while ((local_state.remainder.size() - local_state.remainder_idx) < STANDARD_VECTOR_SIZE) {
+		global_state.lock.lock();
+		if (global_state.ranges_idx == global_state.ranges.size()) {
+			global_state.lock.unlock();
+			break;
+		}
+		const auto &range = global_state.ranges[global_state.ranges_idx++];
+		global_state.lock.unlock();
 
 		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, global_state.filter)) {
 			if (!row_result)
@@ -128,7 +152,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 			for (auto &keyword : keyword_week) {
 				if (keyword.valid) {
-					bind_data.remainder.emplace_back(keyword);
+					local_state.remainder.emplace_back(keyword);
 					keyword = Keyword();
 				}
 			}
@@ -137,8 +161,8 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 	idx_t cardinality = 0;
 
-	while (bind_data.remainder_idx < bind_data.remainder.size()) {
-		const auto &day = bind_data.remainder[bind_data.remainder_idx++];
+	while (local_state.remainder_idx < local_state.remainder.size()) {
+		const auto &day = local_state.remainder[local_state.remainder_idx++];
 
 		for (idx_t i = 0; i < global_state.column_ids.size(); i++) {
 			switch (global_state.column_ids[i]) {
