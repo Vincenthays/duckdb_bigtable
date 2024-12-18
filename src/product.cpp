@@ -92,6 +92,7 @@ unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, T
 struct ProductLocalState : LocalTableFunctionState {
 	idx_t remainder_idx = 0;
 	vector<Product> remainder;
+	std::array<Product, 7> product_week;
 };
 
 unique_ptr<LocalTableFunctionState> ProductInitLocal(ExecutionContext &context, TableFunctionInitInput &input,
@@ -103,8 +104,6 @@ unique_ptr<LocalTableFunctionState> ProductInitLocal(ExecutionContext &context, 
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	auto &global_state = data.global_state->Cast<ProductGlobalState>();
 	auto &local_state = data.local_state->Cast<ProductLocalState>();
-
-	std::array<Product, 7> product_week;
 
 	while ((local_state.remainder.size() - local_state.remainder_idx) < STANDARD_VECTOR_SIZE) {
 		global_state.lock.lock();
@@ -133,7 +132,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 				const date_t &date = Date::EpochToDate(cell.timestamp().count() / 1'000'000);
 				const int32_t &weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 
-				auto &product_day = product_week[weekday];
+				auto &product_day = local_state.product_week[weekday];
 				product_day.valid = true;
 				product_day.pe_id = pe_id;
 				product_day.shop_id = shop_id;
@@ -169,9 +168,9 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 				}
 			}
 
-			for (auto &product : product_week) {
+			for (auto &product : local_state.product_week) {
 				if (product.valid) {
-					local_state.remainder.emplace_back(product);
+					local_state.remainder.emplace_back(std::move(product));
 					product = Product();
 				}
 			}

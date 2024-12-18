@@ -78,6 +78,7 @@ unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, Ta
 struct SearchLocalState : LocalTableFunctionState {
 	idx_t remainder_idx = 0;
 	vector<Keyword> remainder;
+	std::array<Keyword, 200 * 7 * 24> keyword_week;
 };
 
 unique_ptr<LocalTableFunctionState> SearchInitLocal(ExecutionContext &context, TableFunctionInitInput &input,
@@ -89,8 +90,6 @@ unique_ptr<LocalTableFunctionState> SearchInitLocal(ExecutionContext &context, T
 void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
 	auto &global_state = data.global_state->Cast<SearchGlobalState>();
 	auto &local_state = data.local_state->Cast<SearchLocalState>();
-
-	vector<Keyword> keyword_week(200 * 7 * 24);
 
 	while ((local_state.remainder.size() - local_state.remainder_idx) < STANDARD_VECTOR_SIZE) {
 		global_state.lock.lock();
@@ -127,7 +126,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				const int32_t &hour = Timestamp::GetTime(timestamp).micros / 3'600'000'000;
 				const int32_t &week_hour = weekday * 24 + hour;
 
-				auto &keyword_day = keyword_week[200 * week_hour + position - 1];
+				auto &keyword_day = local_state.keyword_week[200 * week_hour + position - 1];
 				keyword_day.valid = true;
 				keyword_day.keyword_id = keyword_id;
 				keyword_day.shop_id = shop_id;
@@ -150,9 +149,9 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				}
 			}
 
-			for (auto &keyword : keyword_week) {
+			for (auto &keyword : local_state.keyword_week) {
 				if (keyword.valid) {
-					local_state.remainder.emplace_back(keyword);
+					local_state.remainder.emplace_back(std::move(keyword));
 					keyword = Keyword();
 				}
 			}
