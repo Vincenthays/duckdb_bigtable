@@ -232,34 +232,32 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 }
 
 cbt::Filter ProductFilter(const vector<column_t> &column_ids) {
-	set<string> filters_cf;
+	set<string> filters;
 
 	for (const auto &column_id : column_ids) {
 		switch (column_id) {
 		case 3:
 		case 4:
 		case 5:
-			filters_cf.emplace("p");
+			filters.emplace("p");
 			break;
 		case 6:
 		case 7:
-			filters_cf.emplace("d");
+			filters.emplace("d");
 			break;
 		case 8:
 		case 9:
 		case 10:
-			filters_cf.emplace("s|S");
+			filters.emplace("s|S");
 			break;
 		}
 	}
 
-	vector<string> filters(filters_cf.begin(), filters_cf.end());
-
 	switch (filters.size()) {
 	case 1:
-		return cbt::Filter::FamilyRegex(filters[0]);
+		return cbt::Filter::FamilyRegex(*filters.begin());
 	case 2:
-		return cbt::Filter::Interleave(cbt::Filter::FamilyRegex(filters[0]), cbt::Filter::FamilyRegex(filters[1]));
+		return cbt::Filter::FamilyRegex(*filters.begin() + "|" + *filters.end());
 	case 3:
 		return cbt::Filter::PassAllFilter();
 	default:
