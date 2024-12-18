@@ -70,7 +70,7 @@ struct ProductGlobalState : GlobalTableFunctionState {
 	mutex lock;
 	idx_t ranges_idx = 0;
 	vector<cbt::RowRange> ranges;
-	
+
 	vector<column_t> column_ids;
 
 	idx_t max_threads;
@@ -106,7 +106,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	auto &local_state = data.local_state->Cast<ProductLocalState>();
 
 	while ((local_state.remainder.size() - local_state.remainder_idx) < STANDARD_VECTOR_SIZE) {
-		
+
 		global_state.lock.lock();
 		if (global_state.ranges_idx == global_state.ranges.size()) {
 			global_state.lock.unlock();
