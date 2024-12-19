@@ -171,7 +171,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 			for (auto &product : local_state.product_week) {
 				if (product.valid) {
-					local_state.remainder.emplace_back(std::move(product));
+					local_state.remainder.emplace_back(product);
 					product = Product();
 				}
 			}
