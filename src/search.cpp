@@ -65,9 +65,7 @@ struct SearchGlobalState : GlobalTableFunctionState {
 	}
 
 	SearchGlobalState(vector<cbt::RowRange> ranges, vector<column_t> column_ids)
-	    : filter(make_filter(column_ids)), ranges(ranges), column_ids(column_ids) {
-		max_threads = ranges.size();
-	};
+	    : filter(make_filter(column_ids)), ranges(ranges), column_ids(column_ids), max_threads(ranges.size()) {};
 };
 
 unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
