@@ -63,16 +63,17 @@ struct SearchGlobalState : GlobalTableFunctionState {
 	idx_t MaxThreads() const override {
 		return max_threads;
 	}
+
+	SearchGlobalState(vector<cbt::RowRange> ranges, vector<column_t> column_ids)
+	    : ranges(ranges), column_ids(column_ids) {
+		filter = make_filter(column_ids);
+		max_threads = ranges.size();
+	};
 };
 
 unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
 	auto &bind_data = input.bind_data->Cast<SearchFunctionData>();
-	auto global_state = make_uniq<SearchGlobalState>();
-	global_state->filter = make_filter(input.column_ids);
-	global_state->max_threads = bind_data.ranges.size();
-	global_state->ranges = std::move(bind_data.ranges);
-	global_state->column_ids = std::move(input.column_ids);
-	return std::move(global_state);
+	return make_uniq<SearchGlobalState>(std::move(bind_data.ranges), std::move(input.column_ids));
 }
 
 struct SearchLocalState : LocalTableFunctionState {
