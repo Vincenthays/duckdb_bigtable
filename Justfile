@@ -23,13 +23,16 @@ deploy:
         gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/v1.1.3/linux_amd64_gcc4/bigtable2.duckdb_extension.gz
     EOF
 
+format:
+    make format
+
 debug:
     VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make debug
 
 release:
     VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make
 
-test: test_product test_search
+test: format test_product test_search
     
 test_product: debug
     ./build/debug/duckdb --init '' -c "FROM product(2024_20, 2024_20, [1124000100000])"

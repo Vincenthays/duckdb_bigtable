@@ -63,7 +63,7 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 }
 
 struct ProductGlobalState : GlobalTableFunctionState {
-	cbt::Filter filter = cbt::Filter::PassAllFilter();
+	cbt::Filter filter;
 	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(32)),
 	                              cbt::TableResource("dataimpact-processing", "processing", "product"));
 
@@ -79,10 +79,7 @@ struct ProductGlobalState : GlobalTableFunctionState {
 	}
 
 	ProductGlobalState(vector<cbt::RowRange> ranges, vector<column_t> column_ids)
-	    : ranges(ranges), column_ids(column_ids) {
-		filter = make_filter(column_ids);
-		max_threads = ranges.size();
-	};
+	    : filter(make_filter(column_ids)), ranges(ranges), column_ids(column_ids), max_threads(ranges.size()) {};
 };
 
 unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
