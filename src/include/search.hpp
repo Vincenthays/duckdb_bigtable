@@ -14,5 +14,8 @@ unique_ptr<LocalTableFunctionState> SearchInitLocal(ExecutionContext &context, T
                                                     GlobalTableFunctionState *global_state);
 void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output);
 
+double SearchScanProgress(ClientContext &context, const FunctionData *bind_data,
+                          const GlobalTableFunctionState *global_state);
+
 static cbt::Filter make_filter(const vector<column_t> &column_ids);
 } // namespace duckdb

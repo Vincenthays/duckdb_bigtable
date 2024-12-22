@@ -14,12 +14,14 @@ static void LoadInternal(DatabaseInstance &db) {
 	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
 	                      ProductFunction, ProductFunctionBind, ProductInitGlobal, ProductInitLocal);
 	product.projection_pushdown = true;
+	product.table_scan_progress = ProductScanProgress;
 	ExtensionUtil::RegisterFunction(db, product);
 
 	TableFunction search("search",
 	                     {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
 	                     SearchFunction, SearchFunctionBind, SearchInitGlobal, SearchInitLocal);
 	search.projection_pushdown = true;
+	search.table_scan_progress = SearchScanProgress;
 	ExtensionUtil::RegisterFunction(db, search);
 }
 

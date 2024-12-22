@@ -198,6 +198,16 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	output.SetCardinality(cardinality);
 }
 
+double SearchScanProgress(ClientContext &context, const FunctionData *bind_data,
+                          const GlobalTableFunctionState *global_state) {
+	const auto &gstate = global_state->Cast<SearchGlobalState>();
+	const auto total_count = gstate.ranges.size();
+	if (total_count == 0)
+		return 100.0;
+
+	return (100.0 * (static_cast<double>(gstate.ranges_idx) + 1.0)) / static_cast<double>(total_count);
+}
+
 static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 	set<string> filters;
 
