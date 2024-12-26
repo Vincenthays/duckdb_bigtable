@@ -3,7 +3,7 @@
   "dependencies": [
     {
       "name": "google-cloud-cpp",
-      "version>=": "2.33.0",
+      "version>=": "2.32.0",
       "default-features": false,
       "features": [
         "bigtable"
