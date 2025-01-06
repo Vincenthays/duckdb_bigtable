@@ -281,7 +281,7 @@ static void ApplyFilter(const TableFilter &filter) {
 	switch (filter.filter_type) {
 		case TableFilterType::CONSTANT_COMPARISON:
 			std::cout << "CONSTANT_COMPARISON" << std::endl;
-			ApplyExpression(filter.Cast<ConstantFilter>());
+			ApplyConstant(filter.Cast<ConstantFilter>());
 			break;
 		case TableFilterType::IS_NULL:
 			std::cout << "IS_NULL" << std::endl;
@@ -304,7 +304,7 @@ static void ApplyFilter(const TableFilter &filter) {
 	}
 }
 
-static void ApplyExpression(const ConstantFilter &filter) {
+static void ApplyConstant(const ConstantFilter &filter) {
 	switch (filter.comparison_type) {
 	case ExpressionType::VALUE_CONSTANT:
 		std::cout << "VALUE_CONSTANT " << filter.constant << std::endl;
