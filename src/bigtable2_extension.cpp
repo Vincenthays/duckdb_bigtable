@@ -13,6 +13,7 @@ static void LoadInternal(DatabaseInstance &db) {
 	TableFunction product("product",
 	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
 	                      ProductFunction, ProductFunctionBind, ProductInitGlobal, ProductInitLocal);
+	product.filter_pushdown = true;
 	product.projection_pushdown = true;
 	product.table_scan_progress = ProductScanProgress;
 	ExtensionUtil::RegisterFunction(db, product);

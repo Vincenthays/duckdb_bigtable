@@ -1,6 +1,7 @@
 #pragma once
 
 #include "duckdb.hpp"
+#include "duckdb/planner/filter/constant_filter.hpp"
 #include <google/cloud/bigtable/table.h>
 
 namespace cbt = ::google::cloud::bigtable;
@@ -21,4 +22,6 @@ double ProductScanProgress(ClientContext &context, const FunctionData *bind_data
                            const GlobalTableFunctionState *global_state);
 
 static cbt::Filter make_filter(const vector<column_t> &column_ids);
+static void ApplyFilter(const TableFilter &filter);
+static void ApplyExpression(const ConstantFilter &filter);
 } // namespace duckdb
