@@ -17,7 +17,6 @@ unique_ptr<LocalTableFunctionState> ProductInitLocal(ExecutionContext &context, 
                                                      GlobalTableFunctionState *global_state);
 
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output);
-
 double ProductScanProgress(ClientContext &context, const FunctionData *bind_data,
                            const GlobalTableFunctionState *global_state);
 

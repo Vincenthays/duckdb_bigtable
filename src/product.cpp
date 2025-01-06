@@ -91,62 +91,6 @@ unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, T
 	return make_uniq<ProductGlobalState>(std::move(bind_data.ranges), std::move(input.column_ids));
 }
 
-static void ApplyFilter(const TableFilter &filter) {
-	switch (filter.filter_type) {
-		case TableFilterType::CONSTANT_COMPARISON:
-			std::cout << "CONSTANT_COMPARISON" << std::endl;
-			ApplyExpression(filter.Cast<ConstantFilter>());
-			break;
-		case TableFilterType::IS_NULL:
-			std::cout << "IS_NULL" << std::endl;
-			break;
-		case TableFilterType::IS_NOT_NULL:
-			std::cout << "IS_NOT_NULL" << std::endl;
-			break;
-		case TableFilterType::CONJUNCTION_OR:
-			std::cout << "CONJUNCTION_OR" << std::endl;
-			break;
-		case TableFilterType::CONJUNCTION_AND:
-			std::cout << "CONJUNCTION_AND" << std::endl;
-			for (auto &child_filter : filter.Cast<ConjunctionAndFilter>().child_filters) {
-				ApplyFilter(*child_filter);
-			}
-			break;
-		case TableFilterType::STRUCT_EXTRACT:
-			std::cout << "STRUCT_EXTRACT" << std::endl;
-			break;
-	}
-}
-
-static void ApplyExpression(const ConstantFilter &filter) {
-	switch (filter.comparison_type) {
-	case ExpressionType::VALUE_CONSTANT:
-		std::cout << "VALUE_CONSTANT " << filter.constant << std::endl;
-		break;
-	case ExpressionType::COMPARE_IN:
-		std::cout << "COMPARE_IN " << filter.constant << std::endl;
-		break;
-	case ExpressionType::OPERATOR_NOT:
-		std::cout << "OPERATOR_NOT " << filter.constant << std::endl;
-		break;
-	case ExpressionType::OPERATOR_IS_NULL:
-		std::cout << "OPERATOR_IS_NULL " << filter.constant << std::endl;
-		break;
-	case ExpressionType::OPERATOR_IS_NOT_NULL:
-		std::cout << "OPERATOR_IS_NOT_NULL " << filter.constant << std::endl;
-		break;
-	case ExpressionType::COMPARE_LESSTHANOREQUALTO:
-		std::cout << "COMPARE_LESSTHANOREQUALTO " << filter.constant << std::endl;
-		break;
-	case ExpressionType::COMPARE_GREATERTHANOREQUALTO:
-		std::cout << "COMPARE_GREATERTHANOREQUALTO " << filter.constant << std::endl;
-		break;
-	default:
-		std::cout << int(filter.comparison_type) << " " << filter.constant << std::endl;
-		break;
-	}
-}
-
 struct ProductLocalState : LocalTableFunctionState {
 	idx_t remainder_idx = 0;
 	vector<Product> remainder;
@@ -330,6 +274,62 @@ static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 		return cbt::Filter::PassAllFilter();
 	default:
 		return cbt::Filter::StripValueTransformer();
+	}
+}
+
+static void ApplyFilter(const TableFilter &filter) {
+	switch (filter.filter_type) {
+		case TableFilterType::CONSTANT_COMPARISON:
+			std::cout << "CONSTANT_COMPARISON" << std::endl;
+			ApplyExpression(filter.Cast<ConstantFilter>());
+			break;
+		case TableFilterType::IS_NULL:
+			std::cout << "IS_NULL" << std::endl;
+			break;
+		case TableFilterType::IS_NOT_NULL:
+			std::cout << "IS_NOT_NULL" << std::endl;
+			break;
+		case TableFilterType::CONJUNCTION_OR:
+			std::cout << "CONJUNCTION_OR" << std::endl;
+			break;
+		case TableFilterType::CONJUNCTION_AND:
+			std::cout << "CONJUNCTION_AND" << std::endl;
+			for (auto &child_filter : filter.Cast<ConjunctionAndFilter>().child_filters) {
+				ApplyFilter(*child_filter);
+			}
+			break;
+		case TableFilterType::STRUCT_EXTRACT:
+			std::cout << "STRUCT_EXTRACT" << std::endl;
+			break;
+	}
+}
+
+static void ApplyExpression(const ConstantFilter &filter) {
+	switch (filter.comparison_type) {
+	case ExpressionType::VALUE_CONSTANT:
+		std::cout << "VALUE_CONSTANT " << filter.constant << std::endl;
+		break;
+	case ExpressionType::COMPARE_IN:
+		std::cout << "COMPARE_IN " << filter.constant << std::endl;
+		break;
+	case ExpressionType::OPERATOR_NOT:
+		std::cout << "OPERATOR_NOT " << filter.constant << std::endl;
+		break;
+	case ExpressionType::OPERATOR_IS_NULL:
+		std::cout << "OPERATOR_IS_NULL " << filter.constant << std::endl;
+		break;
+	case ExpressionType::OPERATOR_IS_NOT_NULL:
+		std::cout << "OPERATOR_IS_NOT_NULL " << filter.constant << std::endl;
+		break;
+	case ExpressionType::COMPARE_LESSTHANOREQUALTO:
+		std::cout << "COMPARE_LESSTHANOREQUALTO " << filter.constant << std::endl;
+		break;
+	case ExpressionType::COMPARE_GREATERTHANOREQUALTO:
+		std::cout << "COMPARE_GREATERTHANOREQUALTO " << filter.constant << std::endl;
+		break;
+	default:
+		std::cout << int(filter.comparison_type) << " " << filter.constant << std::endl;
+		break;
 	}
 }
 } // namespace duckdb
