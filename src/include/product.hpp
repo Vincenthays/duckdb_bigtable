@@ -22,5 +22,5 @@ double ProductScanProgress(ClientContext &context, const FunctionData *bind_data
 
 static cbt::Filter make_filter(const vector<column_t> &column_ids);
 static void ApplyFilter(const TableFilter &filter);
-static void ApplyExpression(const ConstantFilter &filter);
+static void ApplyConstant(const ConstantFilter &filter);
 } // namespace duckdb
