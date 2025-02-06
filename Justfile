@@ -1,3 +1,6 @@
+DUCKDB_VERSION := 1.2.0
+
+
 [macos]
 deploy:
     VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make
@@ -15,12 +18,12 @@ deploy:
 
     docker run -i -v /home/dataimpact/gs.json:/app/gs.json duckdb_extension_linux_amd64 bash <<EOF
         gcloud auth activate-service-account --key-file /app/gs.json
-        gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/v1.1.3/linux_amd64/bigtable2.duckdb_extension.gz
+        gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/{{DUCKDB_VERSION}}/linux_amd64/bigtable2.duckdb_extension.gz
     EOF
 
     docker run -i -v /home/dataimpact/gs.json:/app/gs.json duckdb_extension_linux_amd64_gcc4 bash <<EOF
         gcloud auth activate-service-account --key-file /app/gs.json
-        gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/v1.1.3/linux_amd64_gcc4/bigtable2.duckdb_extension.gz
+        gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/{{DUCKDB_VERSION}}/linux_amd64_gcc4/bigtable2.duckdb_extension.gz
     EOF
 
 format:
