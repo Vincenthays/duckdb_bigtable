@@ -1,9 +1,9 @@
 {
-  "builtin-baseline": "57c08a3223a1ec03c3a31986ee38d32e90b6039c",
+  "builtin-baseline": "344525f74edb4c1d47c559d8bbe06240271441d8",
   "dependencies": [
     {
       "name": "google-cloud-cpp",
-      "version>=": "2.34.0",
+      "version>=": "2.35.0",
       "default-features": false,
       "features": [
         "bigtable"
