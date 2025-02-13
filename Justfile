@@ -1,10 +1,10 @@
-DUCKDB_VERSION := "1.2.0"
+DUCKDB_VERSION := "v1.2.0"
 
 
 [macos]
 deploy:
     VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make
-    @cat build/release/extension/bigtable2/bigtable2.duckdb_extension | gzip | gsutil cp - gs://di_duckdb_extension/v1.1.3/osx_arm64/bigtable2.duckdb_extension.gz
+    @cat build/release/extension/bigtable2/bigtable2.duckdb_extension | gzip | gsutil cp - gs://di_duckdb_extension/{{DUCKDB_VERSION}}/osx_arm64/bigtable2.duckdb_extension.gz
 
 [linux]
 deploy:
