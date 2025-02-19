@@ -34,15 +34,35 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
 
 	auto bind_data = make_uniq<SearchFunctionData>();
+
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
 	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
 	const auto ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
 
+	bool filter_by_shop = input.inputs.size() > 3 && !input.inputs[3].IsNull();
+	vector<string> shop_ids;
+
+	if (filter_by_shop) {
+		const auto &shop_list = ListValue::GetChildren(input.inputs[3]);
+		shop_ids.reserve(shop_list.size()); // Optimize memory allocation
+		for (const auto &shop_id_val : shop_list) {
+			shop_ids.emplace_back(std::to_string(IntegerValue::Get(shop_id_val)));
+		}
+	}
+
 	for (const auto &keyword_id : ls_keyword_id) {
 		string prefix_id = std::to_string(IntegerValue::Get(keyword_id));
 		reverse(prefix_id.begin(), prefix_id.end());
-		bind_data->ranges.emplace_back(
-		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
+
+		if (filter_by_shop) {
+			for (const auto &shop_str : shop_ids) {
+				bind_data->ranges.emplace_back(cbt::RowRange::Closed(
+				    prefix_id + "/" + week_start + "/" + shop_str, prefix_id + "/" + week_end + "/" + shop_str + "0"));
+			}
+		} else {
+			bind_data->ranges.emplace_back(
+			    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
+		}
 	}
 
 	return std::move(bind_data);
