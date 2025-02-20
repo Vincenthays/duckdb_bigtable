@@ -1,16 +1,10 @@
 FROM quay.io/pypa/manylinux_2_28_x86_64:latest
 
-RUN yum install -y epel-release -y pkgconfig
-RUN yum install -y gcc-c++
-RUN yum install -y curl zip unzip tar autoconf
-RUN yum install -y ninja-build
-RUN yum install -y perl-IPC-Cmd
-RUN yum install -y ccache
-RUN yum install -y libgcc*i686 libstdc++*i686 glibc*i686 libgfortran*i686
+RUN apt update && apt install -y build-essential cmake git curl zip unzip tar pkg-config ninja-build
 
 WORKDIR /opt
 RUN git clone https://github.com/Microsoft/vcpkg.git
-RUN ./vcpkg/bootstrap-vcpkg.sh 
+RUN ./vcpkg/bootstrap-vcpkg.sh
 ENV PATH=$PATH:/opt/vcpkg
 ENV VCPKG_TOOLCHAIN_PATH=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
 ENV GEN=ninja
