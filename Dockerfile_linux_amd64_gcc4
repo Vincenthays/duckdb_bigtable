@@ -1,4 +1,4 @@
-FROM quay.io/pypa/manylinux_x_y_x86_64:latest
+FROM quay.io/pypa/manylinux_2_31_x86_64:latest
 
 RUN yum install -y epel-release -y pkgconfig
 RUN yum install -y gcc-c++
