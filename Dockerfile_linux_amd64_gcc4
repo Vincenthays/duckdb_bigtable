@@ -19,21 +19,6 @@ WORKDIR /app
 COPY vcpkg.json ./
 RUN vcpkg install
 COPY . ./
-# try
-RUN make clean
-RUN yum install -y \
-    gcc-c++ \
-    make \
-    cmake \
-    libstdc++-static \
-    zlib-devel \
-    bzip2-devel \
-    xz-devel \
-    ncurses-devel \
-    sqlite-devel \
-    libcurl-devel \
-    libffi-devel \
-    openssl-devel
 
 RUN make
 
