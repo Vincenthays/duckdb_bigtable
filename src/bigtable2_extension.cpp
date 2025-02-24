@@ -20,6 +20,7 @@ static void LoadInternal(DatabaseInstance &db) {
 	TableFunction search("search",
 	                     {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
 	                     SearchFunction, SearchFunctionBind, SearchInitGlobal, SearchInitLocal);
+	search.varargs = LogicalType::LIST(LogicalType::INTEGER);
 	search.projection_pushdown = true;
 	search.table_scan_progress = SearchScanProgress;
 	ExtensionUtil::RegisterFunction(db, search);

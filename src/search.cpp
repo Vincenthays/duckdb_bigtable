@@ -24,6 +24,7 @@ struct Keyword {
 
 struct SearchFunctionData : TableFunctionData {
 	vector<cbt::RowRange> ranges;
+	vector<string> shop_ids;
 };
 
 unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctionBindInput &input,
@@ -34,15 +35,35 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
 
 	auto bind_data = make_uniq<SearchFunctionData>();
+
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
 	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
 	const auto ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
 
+	bool filter_by_shop = input.inputs.size() > 3 && !input.inputs[3].IsNull();
+	// vector<string> shop_ids;
+
+	if (filter_by_shop) {
+		const auto &shop_list = ListValue::GetChildren(input.inputs[3]);
+		bind_data->shop_ids.reserve(shop_list.size());
+		for (const auto &shop_id_val : shop_list) {
+			bind_data->shop_ids.emplace_back(std::to_string(IntegerValue::Get(shop_id_val)));
+		}
+	}
+
 	for (const auto &keyword_id : ls_keyword_id) {
 		string prefix_id = std::to_string(IntegerValue::Get(keyword_id));
 		reverse(prefix_id.begin(), prefix_id.end());
-		bind_data->ranges.emplace_back(
-		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
+
+		if (filter_by_shop) {
+			for (const auto &shop_str : bind_data->shop_ids) {
+				bind_data->ranges.emplace_back(cbt::RowRange::Closed(
+				    prefix_id + "/" + week_start + "/" + shop_str, prefix_id + "/" + week_end + "/" + shop_str + "0"));
+			}
+		} else {
+			bind_data->ranges.emplace_back(
+			    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
+		}
 	}
 
 	return std::move(bind_data);
@@ -64,13 +85,15 @@ struct SearchGlobalState : GlobalTableFunctionState {
 		return max_threads;
 	}
 
-	SearchGlobalState(vector<cbt::RowRange> ranges, vector<column_t> column_ids)
-	    : filter(make_filter(column_ids)), ranges(ranges), column_ids(column_ids), max_threads(ranges.size()) {};
+	SearchGlobalState(vector<cbt::RowRange> ranges, vector<column_t> column_ids, vector<string> shop_ids)
+	    : filter(make_filter(column_ids, shop_ids)), ranges(ranges), column_ids(column_ids),
+	      max_threads(ranges.size()) {};
 };
 
 unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
 	auto &bind_data = input.bind_data->Cast<SearchFunctionData>();
-	return make_uniq<SearchGlobalState>(std::move(bind_data.ranges), std::move(input.column_ids));
+	return make_uniq<SearchGlobalState>(std::move(bind_data.ranges), std::move(input.column_ids),
+	                                    std::move(bind_data.shop_ids));
 }
 
 struct SearchLocalState : LocalTableFunctionState {
@@ -208,8 +231,9 @@ double SearchScanProgress(ClientContext &context, const FunctionData *bind_data,
 	return (100.0 * (static_cast<double>(gstate.ranges_idx) + 1.0)) / static_cast<double>(total_count);
 }
 
-static cbt::Filter make_filter(const vector<column_t> &column_ids) {
+static cbt::Filter make_filter(const vector<column_t> &column_ids, const vector<string> &shop_ids) {
 	set<string> filters;
+	auto result = cbt::Filter::PassAllFilter();
 
 	for (const auto &column_id : column_ids) {
 		switch (column_id) {
@@ -226,11 +250,34 @@ static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 
 	switch (filters.size()) {
 	case 1:
-		return cbt::Filter::FamilyRegex(*filters.begin());
+		result = cbt::Filter::FamilyRegex(*filters.begin());
+		break;
 	case 2:
-		return cbt::Filter::PassAllFilter();
+		result = cbt::Filter::PassAllFilter();
+		break;
 	default:
-		return cbt::Filter::StripValueTransformer();
+		result = cbt::Filter::StripValueTransformer();
+		break;
 	}
+
+	if (!shop_ids.empty()) {
+		string row_key_regex = ".*/.*/(";
+		for (size_t i = 0; i < shop_ids.size(); ++i) {
+			row_key_regex += shop_ids[i];
+			if (i < shop_ids.size() - 1) {
+				row_key_regex += "|";
+			}
+		}
+		row_key_regex += ")";
+
+		// Filters on cells & rowkeys not allowed
+		if (result == cbt::Filter::StripValueTransformer()) {
+			return cbt::Filter::RowKeysRegex(row_key_regex);
+		} else {
+			return cbt::Filter::Chain(cbt::Filter::RowKeysRegex(row_key_regex), result);
+		}
+	}
+
+	return result;
 }
 } // namespace duckdb
