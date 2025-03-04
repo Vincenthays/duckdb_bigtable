@@ -1,5 +1,5 @@
 {
-  "builtin-baseline": "344525f74edb4c1d47c559d8bbe06240271441d8",
+  "builtin-baseline": "566f9496b7e00ee0cc00aca0ab90493d122d148a",
   "dependencies": [
     {
       "name": "google-cloud-cpp",
@@ -8,6 +8,10 @@
       "features": [
         "bigtable"
       ]
+    },
+    {
+      "name": "grpc",
+      "version>=": "1.70.1"
     }
   ]
 }
