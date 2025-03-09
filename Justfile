@@ -29,6 +29,7 @@ deploy:
 
 [linux]
 deploy_test:
+    just pull
     docker build \
         -f Dockerfile_linux_amd64_gcc4 \
         -v {{justfile_directory()}}:/app
