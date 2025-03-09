@@ -27,6 +27,11 @@ deploy:
         gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/{{DUCKDB_VERSION}}/linux_amd64_gcc4/bigtable2.duckdb_extension.gz
     EOF
 
+[linux]
+deploy_test:
+    
+
+
 format:
     make format
 
