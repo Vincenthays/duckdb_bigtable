@@ -30,6 +30,7 @@ deploy:
 [linux]
 deploy_test:
     git pull
+    git submodule update --init --recursive
     docker build -f Dockerfile_linux_amd64_gcc4_test -t duckdb_extension_linux_amd64_gcc4_test .
     docker run -v {{justfile_directory()}}:/app duckdb_extension_linux_amd64_gcc4_test make
 
