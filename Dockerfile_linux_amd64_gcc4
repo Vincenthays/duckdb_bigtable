@@ -17,9 +17,8 @@ ENV GEN=ninja
 
 WORKDIR /app
 COPY vcpkg.json ./
-RUN vcpkg install
+RUN --mount=type=cache,target=/opt/vcpkg/downloads --mount=type=cache,target=/opt/vcpkg/packages vcpkg install
 COPY . ./
-
 RUN make
 
 FROM google/cloud-sdk:slim
