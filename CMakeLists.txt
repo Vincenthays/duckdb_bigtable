@@ -14,8 +14,8 @@ build_static_extension(${EXT_NAME} ${SOURCES})
 build_loadable_extension(${EXT_NAME} "" ${SOURCES})
 
 # Link google-cloud-cpp in both the static library as the loadable extension
-target_link_libraries(${EXT_NAME}_extension google-cloud-cpp::bigtable -Wl,--allow-multiple-definition)
-target_link_libraries(${EXT_NAME}_loadable_extension google-cloud-cpp::bigtable -Wl,--allow-multiple-definition)
+target_link_libraries(${EXT_NAME}_extension google-cloud-cpp::bigtable)
+target_link_libraries(${EXT_NAME}_loadable_extension google-cloud-cpp::bigtable)
 
 install(
   TARGETS ${EXT_NAME}_extension
