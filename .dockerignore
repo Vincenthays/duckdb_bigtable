@@ -7,6 +7,5 @@ testext
 test/python/__pycache__/
 .Rhistory
 .vscode
-CMake*
 *.log
 .cache
