@@ -13,6 +13,7 @@ WORKDIR /app
 # COPY vcpkg.json ./
 # RUN --mount=type=cache,target=/opt/vcpkg/downloads --mount=type=cache,target=/opt/vcpkg/packages vcpkg install
 COPY . ./
+RUN which ninja-build
 RUN make
 
 FROM google/cloud-sdk:slim
