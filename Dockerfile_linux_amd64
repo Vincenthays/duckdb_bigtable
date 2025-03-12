@@ -10,8 +10,8 @@ ENV VCPKG_TOOLCHAIN_PATH=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
 ENV GEN=ninja
 
 WORKDIR /app
-# COPY vcpkg.json ./
-# RUN --mount=type=cache,target=/opt/vcpkg/downloads --mount=type=cache,target=/opt/vcpkg/packages vcpkg install
+COPY vcpkg.json ./
+RUN --mount=type=cache,target=/opt/vcpkg/downloads --mount=type=cache,target=/opt/vcpkg/packages vcpkg install
 COPY . ./
 RUN ln -s /usr/bin/ninja /usr/bin/ninja-build
 RUN make
