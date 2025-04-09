@@ -1,4 +1,4 @@
-DUCKDB_VERSION := "v1.2.1"
+DUCKDB_VERSION := "v1.2.2"
 
 
 [macos]
