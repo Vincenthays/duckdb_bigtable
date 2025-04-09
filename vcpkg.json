@@ -1,5 +1,5 @@
 {
-  "builtin-baseline": "782ccc18d8b819cdef6794a6c03eb3d9f7cd04aa",
+  "builtin-baseline": "2ad004460f5db4d3b66f62f5799ff66c265c4b5d",
   "dependencies": [
     {
       "name": "google-cloud-cpp",
