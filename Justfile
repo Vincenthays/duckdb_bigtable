@@ -13,9 +13,8 @@ deploy:
     git pull
     git submodule update --init --recursive
 
-    docker build -f Dockerfile_linux_amd64 -t duckdb_extension_linux_amd64 . &
-    docker build -f Dockerfile_linux_amd64_gcc4 -t duckdb_extension_linux_amd64_gcc4 . &
-    wait
+    docker build -f Dockerfile_linux_amd64 -t duckdb_extension_linux_amd64 .
+    docker build -f Dockerfile_linux_amd64_gcc4 -t duckdb_extension_linux_amd64_gcc4 .
 
     docker run -i -v /home/dataimpact/gs.json:/app/gs.json duckdb_extension_linux_amd64 bash <<EOF
         gcloud auth activate-service-account --key-file /app/gs.json
