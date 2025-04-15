@@ -17,5 +17,5 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 double SearchScanProgress(ClientContext &context, const FunctionData *bind_data,
                           const GlobalTableFunctionState *global_state);
 
-static cbt::Filter make_filter(const vector<column_t> &column_ids);
+static cbt::Filter make_filter(const vector<column_t> &column_ids, const vector<string> &shop_ids);
 } // namespace duckdb
