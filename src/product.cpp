@@ -26,7 +26,7 @@ struct Product {
 	vector<Value> is_paid;
 };
 
-struct ProductFunctionData : TableFunctionData {
+struct ProductFunctionData final : TableFunctionData {
 	vector<cbt::RowRange> ranges;
 };
 
@@ -62,7 +62,7 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 	return std::move(bind_data);
 }
 
-struct ProductGlobalState : GlobalTableFunctionState {
+struct ProductGlobalState final : GlobalTableFunctionState {
 	cbt::Filter filter;
 	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(32)),
 	                              cbt::TableResource("dataimpact-processing", "processing", "product"));
@@ -87,7 +87,7 @@ unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, T
 	return make_uniq<ProductGlobalState>(std::move(bind_data.ranges), std::move(input.column_ids));
 }
 
-struct ProductLocalState : LocalTableFunctionState {
+struct ProductLocalState final : LocalTableFunctionState {
 	idx_t remainder_idx = 0;
 	vector<Product> remainder;
 	std::array<Product, 7> product_week;

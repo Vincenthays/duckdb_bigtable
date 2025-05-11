@@ -22,7 +22,7 @@ struct Keyword {
 	Value is_paid = false;
 };
 
-struct SearchFunctionData : TableFunctionData {
+struct SearchFunctionData final : TableFunctionData {
 	vector<cbt::RowRange> ranges;
 };
 
@@ -48,7 +48,7 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 	return std::move(bind_data);
 }
 
-struct SearchGlobalState : GlobalTableFunctionState {
+struct SearchGlobalState final : GlobalTableFunctionState {
 	cbt::Filter filter;
 	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(32)),
 	                              cbt::TableResource("dataimpact-processing", "processing", "search"));
@@ -73,7 +73,7 @@ unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, Ta
 	return make_uniq<SearchGlobalState>(std::move(bind_data.ranges), std::move(input.column_ids));
 }
 
-struct SearchLocalState : LocalTableFunctionState {
+struct SearchLocalState final : LocalTableFunctionState {
 	idx_t remainder_idx = 0;
 	vector<Keyword> remainder;
 	std::array<Keyword, 200 * 7 * 24> keyword_week;
