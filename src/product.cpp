@@ -11,7 +11,7 @@ namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
-struct Product {
+struct Product final {
 	bool valid = false;
 	Value pe_id;
 	Value shop_id;
