@@ -130,7 +130,6 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 			const auto &row = row_result.value();
 			const auto &row_key = row.row_key();
-
 			const auto &index = row_key.find_last_of('/');
 			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index + 1)));
 
