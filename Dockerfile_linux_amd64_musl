@@ -1,6 +1,6 @@
 FROM alpine:3
 
-RUN apk add -qq ccache cmake git ninja ninja-build clang19 gcc libssl3 wget bash zip gettext unzip build-base curl make libffi-dev zlib openssh autoconf linux-headers libunwind-dev
+RUN apk add -qq ccache cmake git ninja ninja-build clang20 gcc libssl3 wget bash zip gettext unzip build-base curl make libffi-dev zlib openssh autoconf linux-headers libunwind-dev
 
 WORKDIR /opt
 RUN git clone https://github.com/Microsoft/vcpkg.git
