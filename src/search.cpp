@@ -26,6 +26,8 @@ struct SearchFunctionData final : TableFunctionData {
 	vector<cbt::RowRange> ranges;
 };
 
+static cbt::Filter make_filter(const vector<column_t> &column_ids);
+
 unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctionBindInput &input,
                                             vector<LogicalType> &return_types, vector<string> &names) {
 	names = {"keyword_id", "shop_id", "date", "position", "pe_id", "retailer_p_id", "is_paid"};

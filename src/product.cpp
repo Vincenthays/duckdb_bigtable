@@ -30,6 +30,8 @@ struct ProductFunctionData final : TableFunctionData {
 	vector<cbt::RowRange> ranges;
 };
 
+static cbt::Filter make_filter(const vector<column_t> &column_ids);
+
 unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
                                              vector<LogicalType> &return_types, vector<string> &names) {
 	names = {"pe_id",    "shop_id",    "date",  "price",    "base_price", "unit_price",
