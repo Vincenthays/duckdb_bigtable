@@ -118,10 +118,11 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			global_state.lock.unlock();
 			break;
 		}
-		const auto &pe_id = Value::UBIGINT(global_state.pe_ids[global_state.ranges_idx]);
-		const auto &range = global_state.ranges[global_state.ranges_idx];
-		global_state.ranges_idx++;
+		const auto range_idx = global_state.ranges_idx++;
 		global_state.lock.unlock();
+
+		const auto &pe_id = Value::UBIGINT(global_state.pe_ids[range_idx]);
+		const auto &range = global_state.ranges[range_idx];
 
 		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, global_state.filter)) {
 			if (!row_result)

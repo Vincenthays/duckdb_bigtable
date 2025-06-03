@@ -104,10 +104,11 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			global_state.lock.unlock();
 			break;
 		}
-		const auto &keyword_id = Value::UINTEGER(global_state.keyword_ids[global_state.ranges_idx]);
-		const auto &range = global_state.ranges[global_state.ranges_idx];
-		global_state.ranges_idx++;
+		const auto range_idx = global_state.ranges_idx++;
 		global_state.lock.unlock();
+
+		const auto &keyword_id = Value::UINTEGER(global_state.keyword_ids[range_idx]);
+		const auto &range = global_state.ranges[range_idx];
 
 		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, global_state.filter)) {
 			if (!row_result)
