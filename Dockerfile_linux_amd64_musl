@@ -9,7 +9,7 @@ ENV PATH=$PATH:/opt/vcpkg
 ENV VCPKG_TOOLCHAIN_PATH=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
 ENV VCPKG_FORCE_SYSTEM_BINARIES=1
 ENV GEN=ninja
-ENV DUCKDB_PLATFORM=linux_amd64
+ENV DUCKDB_PLATFORM=linux_amd64_musl
 
 WORKDIR /app
 COPY vcpkg.json ./
