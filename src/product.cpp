@@ -27,6 +27,7 @@ struct Product final {
 };
 
 struct ProductFunctionData final : TableFunctionData {
+	vector<uint64_t> pe_ids;
 	vector<cbt::RowRange> ranges;
 };
 
@@ -54,9 +55,11 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
 	const auto ls_pe_id = ListValue::GetChildren(input.inputs[2]);
 
-	for (const auto &pe_id : ls_pe_id) {
-		string prefix_id = std::to_string(BigIntValue::Get(pe_id));
+	for (const auto &p : ls_pe_id) {
+		const auto &pe_id = BigIntValue::Get(p);
+		string prefix_id = std::to_string(pe_id);
 		reverse(prefix_id.begin(), prefix_id.end());
+		bind_data->pe_ids.emplace_back(std::move(pe_id));
 		bind_data->ranges.emplace_back(
 		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
 	}
@@ -71,6 +74,7 @@ struct ProductGlobalState final : GlobalTableFunctionState {
 
 	mutex lock;
 	idx_t ranges_idx = 0;
+	vector<uint64_t> pe_ids;
 	vector<cbt::RowRange> ranges;
 
 	vector<column_t> column_ids;
@@ -80,13 +84,15 @@ struct ProductGlobalState final : GlobalTableFunctionState {
 		return max_threads;
 	}
 
-	ProductGlobalState(vector<cbt::RowRange> ranges, vector<column_t> column_ids)
-	    : filter(make_filter(column_ids)), ranges(ranges), column_ids(column_ids), max_threads(ranges.size()) {};
+	ProductGlobalState(vector<uint64_t> pe_ids, vector<cbt::RowRange> ranges, vector<column_t> column_ids)
+	    : filter(make_filter(column_ids)), pe_ids(pe_ids), ranges(ranges), column_ids(column_ids),
+	      max_threads(ranges.size()) {};
 };
 
 unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
 	auto &bind_data = input.bind_data->Cast<ProductFunctionData>();
-	return make_uniq<ProductGlobalState>(std::move(bind_data.ranges), std::move(input.column_ids));
+	return make_uniq<ProductGlobalState>(std::move(bind_data.pe_ids), std::move(bind_data.ranges),
+	                                     std::move(input.column_ids));
 }
 
 struct ProductLocalState final : LocalTableFunctionState {
@@ -112,8 +118,11 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			global_state.lock.unlock();
 			break;
 		}
-		const auto &range = global_state.ranges[global_state.ranges_idx++];
+		const auto range_idx = global_state.ranges_idx++;
 		global_state.lock.unlock();
+
+		const auto &pe_id = Value::UBIGINT(global_state.pe_ids[range_idx]);
+		const auto &range = global_state.ranges[range_idx];
 
 		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, global_state.filter)) {
 			if (!row_result)
@@ -121,13 +130,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 			const auto &row = row_result.value();
 			const auto &row_key = row.row_key();
-
-			const auto &index_1 = row_key.find_first_of('/');
-			const auto &index_2 = row_key.find_last_of('/');
-			string prefix_id = row_key.substr(0, index_1);
-			reverse(prefix_id.begin(), prefix_id.end());
-			const auto pe_id = Value::UBIGINT(std::stoull(prefix_id));
-			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
+			const auto &index = row_key.find_last_of('/');
+			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index + 1)));
 
 			for (const auto &cell : row.cells()) {
 				const date_t &date = Date::EpochToDate(cell.timestamp().count() / 1'000'000);
