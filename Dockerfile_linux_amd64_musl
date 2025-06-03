@@ -1,0 +1,22 @@
+FROM alpine:3
+
+RUN apk add -qq ccache cmake git ninja ninja-build clang19 gcc libssl3 wget bash zip gettext unzip build-base curl make libffi-dev zlib openssh autoconf linux-headers libunwind-dev
+
+WORKDIR /opt
+RUN git clone https://github.com/Microsoft/vcpkg.git
+RUN ./vcpkg/bootstrap-vcpkg.sh
+ENV PATH=$PATH:/opt/vcpkg
+ENV VCPKG_TOOLCHAIN_PATH=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
+ENV GEN=ninja
+
+WORKDIR /app
+COPY vcpkg.json ./
+RUN --mount=type=cache,target=/opt/vcpkg/downloads --mount=type=cache,target=/opt/vcpkg/packages vcpkg install
+COPY . ./
+RUN make
+
+FROM google/cloud-sdk:slim
+
+WORKDIR /app
+COPY --from=0 /app/build/release/extension/bigtable2/bigtable2.duckdb_extension .
+RUN gzip bigtable2.duckdb_extension
