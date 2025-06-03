@@ -56,7 +56,7 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 	const auto ls_pe_id = ListValue::GetChildren(input.inputs[2]);
 
 	for (const auto &p : ls_pe_id) {
-		const auto &pe_id = BigIntValue::Get(p);
+		const auto pe_id = BigIntValue::Get(p);
 		string prefix_id = std::to_string(pe_id);
 		reverse(prefix_id.begin(), prefix_id.end());
 		bind_data->pe_ids.emplace_back(std::move(pe_id));

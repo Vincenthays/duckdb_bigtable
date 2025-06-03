@@ -42,7 +42,7 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 	const auto ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
 
 	for (const auto &k : ls_keyword_id) {
-		const auto &keyword_id = IntegerValue::Get(k);
+		const auto keyword_id = IntegerValue::Get(k);
 		string prefix_id = std::to_string(keyword_id);
 		reverse(prefix_id.begin(), prefix_id.end());
 		bind_data->keyword_ids.push_back(std::move(keyword_id));
