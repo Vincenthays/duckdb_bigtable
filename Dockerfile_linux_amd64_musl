@@ -11,7 +11,7 @@ ENV GEN=ninja
 
 WORKDIR /app
 COPY vcpkg.json ./
-RUN --mount=type=cache,target=/opt/vcpkg/downloads --mount=type=cache,target=/opt/vcpkg/packages vcpkg install
+RUN vcpkg install
 COPY . ./
 RUN make
 
