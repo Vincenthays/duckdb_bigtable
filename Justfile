@@ -50,7 +50,7 @@ test_search: debug
     ./build/debug/duckdb --init '' -c "FROM search(2024_48, 2024_48, [130000])"
 
 bench: release
-    time ./build/release/duckdb --init '' -c "FROM search(2024_45, 2024_45, [98334])"
+    ./build/release/duckdb --init '' -c ".timer on" -c "FROM search(2024_45, 2024_45, [98334])"
 
 test_filter_pushdown: debug
     ./build/debug/duckdb --init '' -c "SELECT pe_id, price FROM product(2024_20, 2024_20, [1124000100000])"
