@@ -4,10 +4,12 @@ RUN apk add -qq ccache cmake git ninja ninja-build clang20 gcc libssl3 wget bash
 
 WORKDIR /opt
 RUN git clone https://github.com/Microsoft/vcpkg.git
-RUN ./vcpkg/bootstrap-vcpkg.sh
+RUN VCPKG_FORCE_SYSTEM_BINARIES=1 ./vcpkg/bootstrap-vcpkg.sh
 ENV PATH=$PATH:/opt/vcpkg
 ENV VCPKG_TOOLCHAIN_PATH=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
+ENV VCPKG_FORCE_SYSTEM_BINARIES=1
 ENV GEN=ninja
+ENV DUCKDB_PLATFORM=linux_amd64
 
 WORKDIR /app
 COPY vcpkg.json ./
