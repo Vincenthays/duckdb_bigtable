@@ -23,6 +23,7 @@ struct Keyword final {
 };
 
 struct SearchFunctionData final : TableFunctionData {
+	vector<uint32_t> keyword_ids;
 	vector<cbt::RowRange> ranges;
 };
 
@@ -40,9 +41,11 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
 	const auto ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
 
-	for (const auto &keyword_id : ls_keyword_id) {
-		string prefix_id = std::to_string(IntegerValue::Get(keyword_id));
+	for (const auto &k : ls_keyword_id) {
+		const auto &keyword_id = IntegerValue::Get(k);
+		string prefix_id = std::to_string(keyword_id);
 		reverse(prefix_id.begin(), prefix_id.end());
+		bind_data->keyword_ids.push_back(std::move(keyword_id));
 		bind_data->ranges.emplace_back(
 		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
 	}
@@ -57,6 +60,7 @@ struct SearchGlobalState final : GlobalTableFunctionState {
 
 	mutex lock;
 	idx_t ranges_idx = 0;
+	vector<uint32_t> keyword_ids;
 	vector<cbt::RowRange> ranges;
 
 	vector<column_t> column_ids;
@@ -66,13 +70,15 @@ struct SearchGlobalState final : GlobalTableFunctionState {
 		return max_threads;
 	}
 
-	SearchGlobalState(vector<cbt::RowRange> ranges, vector<column_t> column_ids)
-	    : filter(make_filter(column_ids)), ranges(ranges), column_ids(column_ids), max_threads(ranges.size()) {};
+	SearchGlobalState(vector<uint32_t> keyword_ids, vector<cbt::RowRange> ranges, vector<column_t> column_ids)
+	    : filter(make_filter(column_ids)), keyword_ids(keyword_ids), ranges(ranges), column_ids(column_ids),
+	      max_threads(ranges.size()) {};
 };
 
 unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
 	auto &bind_data = input.bind_data->Cast<SearchFunctionData>();
-	return make_uniq<SearchGlobalState>(std::move(bind_data.ranges), std::move(input.column_ids));
+	return make_uniq<SearchGlobalState>(std::move(bind_data.keyword_ids), std::move(bind_data.ranges),
+	                                    std::move(input.column_ids));
 }
 
 struct SearchLocalState final : LocalTableFunctionState {
@@ -98,6 +104,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			global_state.lock.unlock();
 			break;
 		}
+		const auto &keyword_id = Value::UINTEGER(global_state.keyword_ids[global_state.ranges_idx]);
 		const auto &range = global_state.ranges[global_state.ranges_idx++];
 		global_state.lock.unlock();
 
@@ -108,12 +115,8 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			const auto &row = row_result.value();
 			const auto &row_key = row.row_key();
 
-			const auto &index_1 = row_key.find_first_of('/');
-			const auto &index_2 = row_key.find_last_of('/');
-			string prefix_id = row_key.substr(0, index_1);
-			reverse(prefix_id.begin(), prefix_id.end());
-			const auto keyword_id = Value::UINTEGER(std::stoull(prefix_id));
-			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index_2 + 1)));
+			const auto &index = row_key.find_last_of('/');
+			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index + 1)));
 
 			for (const auto &cell : row.cells()) {
 				const int32_t &position = std::stoul(cell.column_qualifier());
