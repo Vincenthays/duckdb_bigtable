@@ -50,7 +50,7 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
 	}
 
-	return std::move(bind_data);
+	return bind_data;
 }
 
 struct SearchGlobalState final : GlobalTableFunctionState {
@@ -89,8 +89,7 @@ struct SearchLocalState final : LocalTableFunctionState {
 
 unique_ptr<LocalTableFunctionState> SearchInitLocal(ExecutionContext &context, TableFunctionInitInput &input,
                                                     GlobalTableFunctionState *global_state) {
-	auto local_state = make_uniq<SearchLocalState>();
-	return std::move(local_state);
+	return make_uniq<SearchLocalState>();
 }
 
 void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {

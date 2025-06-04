@@ -64,7 +64,7 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
 	}
 
-	return std::move(bind_data);
+	return bind_data;
 }
 
 struct ProductGlobalState final : GlobalTableFunctionState {
@@ -103,8 +103,7 @@ struct ProductLocalState final : LocalTableFunctionState {
 
 unique_ptr<LocalTableFunctionState> ProductInitLocal(ExecutionContext &context, TableFunctionInitInput &input,
                                                      GlobalTableFunctionState *global_state) {
-	auto local_state = make_uniq<ProductLocalState>();
-	return std::move(local_state);
+	return make_uniq<ProductLocalState>();
 }
 
 void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk &output) {
