@@ -155,7 +155,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 			for (auto &keyword : local_state.keyword_week) {
 				if (keyword.valid) {
-					local_state.remainder.emplace_back(keyword);
+					local_state.remainder.emplace_back(std::move(keyword));
 					keyword = Keyword();
 				}
 			}

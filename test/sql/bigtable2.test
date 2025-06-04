@@ -1,6 +1,6 @@
 # name: test/sql/bigtable2.test
 # description: test bigtable2 extension
-# group: [bigtable2]
+# group: [sql]
 
 # Before we load the extension, this will fail
 statement error
