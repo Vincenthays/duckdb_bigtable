@@ -124,7 +124,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 		const auto &pe_id = Value::UBIGINT(global_state.pe_ids[range_idx]);
 		const auto &range = global_state.ranges[range_idx];
 
-		for (StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, global_state.filter)) {
+		for (const StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, global_state.filter)) {
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
 
@@ -183,12 +183,10 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	}
 
 	idx_t cardinality = 0;
-	const auto &column_ids_size = global_state.column_ids.size();
-
 	while (local_state.remainder_idx < local_state.remainder.size()) {
 		const auto &day = local_state.remainder[local_state.remainder_idx++];
 
-		for (idx_t i = 0; i < column_ids_size; i++) {
+		for (idx_t i = 0; i < global_state.column_ids.size(); i++) {
 			switch (global_state.column_ids[i]) {
 			case 0:
 				output.SetValue(i, cardinality, day.pe_id);
