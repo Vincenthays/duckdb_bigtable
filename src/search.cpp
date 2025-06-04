@@ -114,9 +114,9 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			if (!row_result)
 				throw std::runtime_error(row_result.status().message());
 
-			const auto &row = row_result.value();
-			const auto &row_key = row.row_key();
-			const auto &index = row_key.find_last_of('/');
+			const auto row = row_result.value();
+			const auto row_key = row.row_key();
+			const auto index = row_key.find_last_of('/');
 			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index + 1)));
 
 			for (const auto &cell : row.cells()) {
