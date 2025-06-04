@@ -59,7 +59,7 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 		const auto pe_id = BigIntValue::Get(p);
 		string prefix_id = std::to_string(pe_id);
 		reverse(prefix_id.begin(), prefix_id.end());
-		bind_data->pe_ids.emplace_back(std::move(pe_id));
+		bind_data->pe_ids.emplace_back(pe_id);
 		bind_data->ranges.emplace_back(
 		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
 	}

@@ -45,7 +45,7 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 		const auto keyword_id = IntegerValue::Get(k);
 		string prefix_id = std::to_string(keyword_id);
 		reverse(prefix_id.begin(), prefix_id.end());
-		bind_data->keyword_ids.push_back(std::move(keyword_id));
+		bind_data->keyword_ids.push_back(keyword_id);
 		bind_data->ranges.emplace_back(
 		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
 	}
