@@ -54,18 +54,18 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 }
 
 struct SearchGlobalState final : GlobalTableFunctionState {
-	cbt::Filter filter;
+	const cbt::Filter filter;
 	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(32)),
 	                              cbt::TableResource("dataimpact-processing", "processing", "search"));
 
 	mutex lock;
 	idx_t ranges_idx = 0;
-	vector<uint32_t> keyword_ids;
-	vector<cbt::RowRange> ranges;
+	const vector<uint32_t> keyword_ids;
+	const vector<cbt::RowRange> ranges;
 
-	vector<column_t> column_ids;
+	const vector<column_t> column_ids;
 
-	idx_t max_threads;
+	const idx_t max_threads;
 	idx_t MaxThreads() const override {
 		return max_threads;
 	}
