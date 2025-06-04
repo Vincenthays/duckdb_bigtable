@@ -182,10 +182,12 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	}
 
 	idx_t cardinality = 0;
+	const auto column_count = global_state.column_ids.size();
+
 	while (local_state.remainder_idx < local_state.remainder.size()) {
 		const auto &day = local_state.remainder[local_state.remainder_idx++];
 
-		for (idx_t i = 0; i < global_state.column_ids.size(); i++) {
+		for (idx_t i = 0; i < column_count; i++) {
 			switch (global_state.column_ids[i]) {
 			case 0:
 				output.SetValue(i, cardinality, day.pe_id);
