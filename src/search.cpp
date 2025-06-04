@@ -126,10 +126,10 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 					continue;
 
 				const timestamp_t timestamp = Timestamp::FromEpochMicroSeconds(cell.timestamp().count());
-				const date_t &date = Timestamp::GetDate(timestamp);
-				const int32_t &weekday = Date::ExtractISODayOfTheWeek(date) - 1;
-				const int32_t &hour = Timestamp::GetTime(timestamp).micros / 3'600'000'000;
-				const int32_t &week_hour = weekday * 24 + hour;
+				const date_t date = Timestamp::GetDate(timestamp);
+				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
+				const int32_t hour = Timestamp::GetTime(timestamp).micros / 3'600'000'000;
+				const int32_t week_hour = weekday * 24 + hour;
 
 				auto &keyword_day = local_state.keyword_week[200 * week_hour + position - 1];
 				keyword_day.valid = true;
