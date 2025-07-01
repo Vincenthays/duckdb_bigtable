@@ -193,10 +193,12 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 	if (count == 0) {
 		output.SetCardinality(0);
+		local_state.remainder_idx = 0;
+		local_state.remainder.clear();
 		return;
 	}
 
-	for (idx_t i = 0; i < count; ++i) {
+	for (idx_t i = 0; i < count; i++) {
 		const auto &keyword = local_state.remainder[local_state.remainder_idx + i];
 		for (idx_t col_idx = 0; col_idx < global_state.column_ids.size(); ++col_idx) {
 			auto &out_vec = output.data[col_idx];

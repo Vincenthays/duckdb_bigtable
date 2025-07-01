@@ -217,6 +217,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 	if (count == 0) {
 		output.SetCardinality(0);
+		local_state.remainder_idx = 0;
+		local_state.remainder.clear();
 		return;
 	}
 
