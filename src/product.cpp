@@ -1,8 +1,12 @@
+#include <optional>
+#include <string_view>
+#include <google/cloud/bigtable/table.h>
+
+#include "utils.hpp"
 #include "duckdb.hpp"
 #include "product.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension_util.hpp"
-#include <google/cloud/bigtable/table.h>
 
 using ::google::cloud::GrpcNumChannelsOption;
 using ::google::cloud::Options;
@@ -11,19 +15,32 @@ namespace cbt = ::google::cloud::bigtable;
 
 namespace duckdb {
 
+enum ProductColumn : column_t {
+	PE_ID = 0,
+	SHOP_ID = 1,
+	DATE = 2,
+	PRICE = 3,
+	BASE_PRICE = 4,
+	UNIT_PRICE = 5,
+	PROMO_ID = 6,
+	PROMO_TEXT = 7,
+	SHELF = 8,
+	POSITION = 9,
+	IS_PAID = 10
+};
+
 struct Product final {
-	bool valid = false;
-	Value pe_id;
-	Value shop_id;
-	Value date;
-	Value price;
-	Value base_price;
-	Value unit_price;
-	Value promo_id;
-	Value promo_text;
-	vector<Value> shelf;
-	vector<Value> position;
-	vector<Value> is_paid;
+	uint64_t pe_id;
+	uint32_t shop_id;
+	date_t date;
+	std::optional<float> price;
+	std::optional<float> base_price;
+	std::optional<float> unit_price;
+	std::optional<uint32_t> promo_id;
+	std::optional<string> promo_text;
+	vector<string> shelf;
+	vector<uint32_t> position;
+	vector<bool> is_paid;
 };
 
 struct ProductFunctionData final : TableFunctionData {
@@ -53,12 +70,15 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 	auto bind_data = make_uniq<ProductFunctionData>();
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
 	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
-	const auto ls_pe_id = ListValue::GetChildren(input.inputs[2]);
+	const auto &ls_pe_id = ListValue::GetChildren(input.inputs[2]);
+
+	bind_data->pe_ids.reserve(ls_pe_id.size());
+	bind_data->ranges.reserve(ls_pe_id.size());
 
 	for (const auto &p : ls_pe_id) {
 		const auto pe_id = BigIntValue::Get(p);
 		string prefix_id = std::to_string(pe_id);
-		reverse(prefix_id.begin(), prefix_id.end());
+		std::reverse(prefix_id.begin(), prefix_id.end());
 		bind_data->pe_ids.emplace_back(pe_id);
 		bind_data->ranges.emplace_back(
 		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
@@ -69,23 +89,24 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 
 struct ProductGlobalState final : GlobalTableFunctionState {
 	const cbt::Filter filter;
-	cbt::Table table = cbt::Table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(32)),
-	                              cbt::TableResource("dataimpact-processing", "processing", "product"));
+	cbt::Table table;
 
 	mutex lock;
 	idx_t ranges_idx = 0;
 	const vector<uint64_t> pe_ids;
 	const vector<cbt::RowRange> ranges;
-
 	const vector<column_t> column_ids;
-
 	const idx_t max_threads;
+
 	idx_t MaxThreads() const override {
 		return max_threads;
 	}
 
-	ProductGlobalState(vector<uint64_t> pe_ids, vector<cbt::RowRange> ranges, vector<column_t> column_ids)
-	    : filter(make_filter(column_ids)), pe_ids(pe_ids), ranges(ranges), column_ids(column_ids),
+	ProductGlobalState(vector<uint64_t> pe_ids_p, vector<cbt::RowRange> ranges_p, vector<column_t> column_ids_p)
+	    : filter(make_filter(column_ids_p)),
+	      table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(32)),
+	            cbt::TableResource("dataimpact-processing", "processing", "product")),
+	      pe_ids(std::move(pe_ids_p)), ranges(std::move(ranges_p)), column_ids(std::move(column_ids_p)),
 	      max_threads(ranges.size()) {};
 };
 
@@ -98,7 +119,7 @@ unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, T
 struct ProductLocalState final : LocalTableFunctionState {
 	idx_t remainder_idx = 0;
 	vector<Product> remainder;
-	std::array<Product, 7> product_week;
+	std::array<std::optional<Product>, 7> product_week;
 };
 
 unique_ptr<LocalTableFunctionState> ProductInitLocal(ExecutionContext &context, TableFunctionInitInput &input,
@@ -112,15 +133,15 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 	while ((local_state.remainder.size() - local_state.remainder_idx) < STANDARD_VECTOR_SIZE) {
 		// Get next range if any
-		global_state.lock.lock();
-		if (global_state.ranges_idx == global_state.ranges.size()) {
-			global_state.lock.unlock();
-			break;
+		idx_t range_idx;
+		{
+			lock_guard<mutex> guard(global_state.lock);
+			if (global_state.ranges_idx == global_state.ranges.size())
+				break; // No more ranges to process
+			range_idx = global_state.ranges_idx++;
 		}
-		const auto range_idx = global_state.ranges_idx++;
-		global_state.lock.unlock();
 
-		const auto &pe_id = Value::UBIGINT(global_state.pe_ids[range_idx]);
+		const auto pe_id = global_state.pe_ids[range_idx];
 		const auto &range = global_state.ranges[range_idx];
 
 		for (const StatusOr<cbt::Row> &row_result : global_state.table.ReadRows(range, global_state.filter)) {
@@ -128,153 +149,190 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 				throw std::runtime_error(row_result.status().message());
 
 			const auto &row = row_result.value();
-			const auto &row_key = row.row_key();
+			std::string_view row_key = row.row_key();
 			const auto index = row_key.find_last_of('/');
-			const auto shop_id = Value::UINTEGER(std::stoul(row_key.substr(index + 1)));
+			const auto shop_id_sv = row_key.substr(index + 1);
+			auto shop_id_opt = ParseUint32(shop_id_sv);
+			if (!shop_id_opt) {
+				continue;
+			}
+			const auto shop_id = *shop_id_opt;
 
 			for (const auto &cell : row.cells()) {
-				const date_t &date = Date::EpochToDate(cell.timestamp().count() / 1'000'000);
-				const int32_t &weekday = Date::ExtractISODayOfTheWeek(date) - 1;
+				const date_t date = Date::EpochToDate(cell.timestamp().count() / 1'000'000);
+				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 
 				auto &product_day = local_state.product_week[weekday];
-				product_day.valid = true;
-				product_day.pe_id = pe_id;
-				product_day.shop_id = shop_id;
-				product_day.date = Value::DATE(date);
+				if (!product_day) {
+					product_day.emplace();
+					product_day->pe_id = pe_id;
+					product_day->shop_id = shop_id;
+					product_day->date = date;
+				}
 
-				if (global_state.filter == cbt::Filter::StripValueTransformer())
-					continue;
+				std::string_view family = cell.family_name();
+				std::string_view qualifier = cell.column_qualifier();
+				std::string_view value = cell.value();
 
-				switch (cell.family_name()[0]) {
+				switch (family[0]) {
 				case 'p':
-					switch (cell.column_qualifier()[0]) {
+					switch (qualifier[0]) {
 					case 'p':
-						product_day.price = Value(std::stod(cell.value()));
+						product_day->price = ParseFloat(value);
 						break;
 					case 'b':
-						product_day.base_price = Value(std::stod(cell.value()));
+						product_day->base_price = ParseFloat(value);
 						break;
 					case 'u':
-						product_day.unit_price = Value(std::stod(cell.value()));
+						product_day->unit_price = ParseFloat(value);
 						break;
 					}
 					break;
 				case 'd':
-					product_day.promo_id = Value::UINTEGER(std::stoul(cell.column_qualifier()));
-					product_day.promo_text = Value(cell.value());
+					product_day->promo_id = ParseUint32(qualifier);
+					product_day->promo_text = string(value);
 					break;
 				case 's':
 				case 'S':
-					product_day.shelf.emplace_back(Value(cell.column_qualifier()));
-					product_day.position.emplace_back(Value::UINTEGER(std::stoul(cell.value())));
-					product_day.is_paid.emplace_back(Value::BOOLEAN(cell.family_name()[0] == 'S'));
+					if (auto pos = ParseUint32(value)) {
+						product_day->shelf.emplace_back(string(qualifier));
+						product_day->position.emplace_back(*pos);
+						product_day->is_paid.emplace_back(family[0] == 'S');
+					}
 					break;
 				}
 			}
 
-			for (auto &product : local_state.product_week) {
-				if (product.valid) {
-					local_state.remainder.emplace_back(std::move(product));
-					product = Product();
+			for (auto &product_opt : local_state.product_week) {
+				if (product_opt) {
+					local_state.remainder.emplace_back(std::move(*product_opt));
+					product_opt.reset();
 				}
 			}
 		}
 	}
 
-	idx_t cardinality = 0;
-	const auto column_count = global_state.column_ids.size();
+	const idx_t count =
+	    std::min((idx_t)STANDARD_VECTOR_SIZE, (idx_t)local_state.remainder.size() - local_state.remainder_idx);
 
-	while (local_state.remainder_idx < local_state.remainder.size()) {
-		const auto &day = local_state.remainder[local_state.remainder_idx++];
+	if (count == 0) {
+		output.SetCardinality(0);
+		return;
+	}
 
-		for (idx_t i = 0; i < column_count; i++) {
-			switch (global_state.column_ids[i]) {
-			case 0:
-				output.SetValue(i, cardinality, day.pe_id);
+	for (idx_t i = 0; i < count; i++) {
+		const auto &product = local_state.remainder[local_state.remainder_idx + i];
+		for (idx_t col_idx = 0; col_idx < global_state.column_ids.size(); col_idx++) {
+			auto &out_vec = output.data[col_idx];
+			const auto column_id = global_state.column_ids[col_idx];
+
+			switch (static_cast<ProductColumn>(column_id)) {
+			case ProductColumn::PE_ID:
+				out_vec.SetValue(i, Value::UBIGINT(product.pe_id));
 				break;
-			case 1:
-				output.SetValue(i, cardinality, day.shop_id);
+			case ProductColumn::SHOP_ID:
+				out_vec.SetValue(i, Value::UINTEGER(product.shop_id));
 				break;
-			case 2:
-				output.SetValue(i, cardinality, day.date);
+			case ProductColumn::DATE:
+				out_vec.SetValue(i, Value::DATE(product.date));
 				break;
-			case 3:
-				output.SetValue(i, cardinality, day.price);
+			case ProductColumn::PRICE:
+				out_vec.SetValue(i, product.price ? Value::FLOAT(*product.price) : Value());
 				break;
-			case 4:
-				output.SetValue(i, cardinality, day.base_price);
+			case ProductColumn::BASE_PRICE:
+				out_vec.SetValue(i, product.base_price ? Value::FLOAT(*product.base_price) : Value());
 				break;
-			case 5:
-				output.SetValue(i, cardinality, day.unit_price);
+			case ProductColumn::UNIT_PRICE:
+				out_vec.SetValue(i, product.unit_price ? Value::FLOAT(*product.unit_price) : Value());
 				break;
-			case 6:
-				output.SetValue(i, cardinality, day.promo_id);
+			case ProductColumn::PROMO_ID:
+				out_vec.SetValue(i, product.promo_id ? Value::UINTEGER(*product.promo_id) : Value());
 				break;
-			case 7:
-				output.SetValue(i, cardinality, day.promo_text);
+			case ProductColumn::PROMO_TEXT:
+				out_vec.SetValue(i, product.promo_text ? Value(*product.promo_text) : Value());
 				break;
-			case 8:
-				output.SetValue(i, cardinality, Value::LIST(day.shelf));
-				break;
-			case 9:
-				output.SetValue(i, cardinality, Value::LIST(day.position));
-				break;
-			case 10:
-				output.SetValue(i, cardinality, Value::LIST(day.is_paid));
+			case ProductColumn::SHELF: {
+				vector<Value> vals;
+				vals.reserve(product.shelf.size());
+				for (const auto &s : product.shelf) {
+					vals.emplace_back(s);
+				}
+				out_vec.SetValue(i, Value::LIST(LogicalType::VARCHAR, std::move(vals)));
 				break;
 			}
-		}
-
-		if (++cardinality == STANDARD_VECTOR_SIZE) {
-			output.SetCardinality(cardinality);
-			return;
+			case ProductColumn::POSITION: {
+				vector<Value> vals;
+				vals.reserve(product.position.size());
+				for (const auto &p : product.position) {
+					vals.emplace_back(Value::UINTEGER(p));
+				}
+				out_vec.SetValue(i, Value::LIST(LogicalType::UINTEGER, std::move(vals)));
+				break;
+			}
+			case ProductColumn::IS_PAID: {
+				vector<Value> vals;
+				vals.reserve(product.is_paid.size());
+				for (const auto &ip : product.is_paid) {
+					vals.emplace_back(Value::BOOLEAN(ip));
+				}
+				out_vec.SetValue(i, Value::LIST(LogicalType::BOOLEAN, std::move(vals)));
+				break;
+			}
+			}
 		}
 	}
 
-	output.SetCardinality(cardinality);
+	local_state.remainder_idx += count;
+	output.SetCardinality(count);
 }
 
 double ProductScanProgress(ClientContext &context, const FunctionData *bind_data,
                            const GlobalTableFunctionState *global_state) {
 	const auto &gstate = global_state->Cast<ProductGlobalState>();
 	const auto total_count = gstate.ranges.size();
-	if (total_count == 0)
+	if (total_count == 0) {
 		return 100.0;
-
-	return (100.0 * (static_cast<double>(gstate.ranges_idx) + 1.0)) / static_cast<double>(total_count);
+	}
+	const auto completed = static_cast<double>(gstate.ranges_idx);
+	return (100.0 * completed) / static_cast<double>(total_count);
 }
 
 static cbt::Filter make_filter(const vector<column_t> &column_ids) {
-	set<string> filters;
+	set<string> families;
 
 	for (const auto &column_id : column_ids) {
-		switch (column_id) {
-		case 3:
-		case 4:
-		case 5:
-			filters.emplace("p");
+		switch (static_cast<ProductColumn>(column_id)) {
+		case ProductColumn::PRICE:
+		case ProductColumn::BASE_PRICE:
+		case ProductColumn::UNIT_PRICE:
+			families.emplace("p");
 			break;
-		case 6:
-		case 7:
-			filters.emplace("d");
+		case ProductColumn::PROMO_ID:
+		case ProductColumn::PROMO_TEXT:
+			families.emplace("d");
 			break;
-		case 8:
-		case 9:
-		case 10:
-			filters.emplace("s|S");
+		case ProductColumn::SHELF:
+		case ProductColumn::POSITION:
+		case ProductColumn::IS_PAID:
+			families.emplace("s|S");
+			break;
+		default:
 			break;
 		}
 	}
 
-	switch (filters.size()) {
-	case 1:
-		return cbt::Filter::FamilyRegex(*filters.begin());
-	case 2:
-		return cbt::Filter::FamilyRegex(*filters.begin() + "|" + *filters.end());
-	case 3:
-		return cbt::Filter::PassAllFilter();
-	default:
+	if (families.empty())
 		return cbt::Filter::StripValueTransformer();
+	if (families.size() >= 3)
+		return cbt::Filter::PassAllFilter();
+
+	string regex;
+	for (const auto &family : families) {
+		if (!regex.empty()) {
+			regex += "|";
+		}
+		regex += family;
 	}
+	return cbt::Filter::FamilyRegex(std::move(regex));
 }
 } // namespace duckdb

@@ -9,7 +9,7 @@ include_directories(src/include)
 
 find_package(google_cloud_cpp_bigtable REQUIRED)
 
-set(SOURCES src/bigtable2_extension.cpp src/product.cpp src/search.cpp)
+set(SOURCES src/bigtable2_extension.cpp src/product.cpp src/search.cpp src/utils.cpp)
 build_static_extension(${EXT_NAME} ${SOURCES})
 build_loadable_extension(${EXT_NAME} "" ${SOURCES})
 
