@@ -136,8 +136,9 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 		idx_t range_idx;
 		{
 			lock_guard<mutex> guard(global_state.lock);
-			if (global_state.ranges_idx == global_state.ranges.size())
-				break; // No more ranges to process
+			if (global_state.ranges_idx == global_state.ranges.size()) {
+				break;
+			}
 			range_idx = global_state.ranges_idx++;
 		}
 
