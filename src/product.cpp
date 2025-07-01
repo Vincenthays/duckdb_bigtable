@@ -132,7 +132,6 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	auto &local_state = data.local_state->Cast<ProductLocalState>();
 
 	while ((local_state.remainder.size() - local_state.remainder_idx) < STANDARD_VECTOR_SIZE) {
-		// Get next range if any
 		idx_t range_idx;
 		{
 			lock_guard<mutex> guard(global_state.lock);
