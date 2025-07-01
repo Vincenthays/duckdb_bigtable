@@ -40,7 +40,7 @@ test_product: debug
     ./build/debug/duckdb --init '' -c "FROM product(2024_20, 2024_20, [1124000100000])"
 
 test_search: debug
-    ./build/debug/duckdb --init '' -c "FROM search(2024_48, 2024_48, [130000])"
+    ./build/debug/duckdb --init '' -c "FROM search(2024_48, 2024_48, [130000]) ORDER BY keyword_id, shop_id, position"
 
 bench: release
     ./build/release/duckdb --init '' -c ".timer on" \
