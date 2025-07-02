@@ -1,10 +1,10 @@
 #include "utils.hpp"
 
 #include <string>
+#include <cstdint>
 #include <optional>
 #include <charconv>
 #include <stdexcept>
-
 
 std::optional<uint8_t> ParseUint8(std::string_view s) {
 	uint8_t result;
