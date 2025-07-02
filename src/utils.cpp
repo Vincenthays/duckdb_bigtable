@@ -1,9 +1,9 @@
 #include "utils.hpp"
 
-#include <charconv>
-#include <stdexcept>
 #include <string>
 #include <optional>
+#include <charconv>
+#include <stdexcept>
 
 
 std::optional<uint8_t> ParseUint8(std::string_view s) {
