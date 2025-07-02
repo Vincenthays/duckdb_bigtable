@@ -3,6 +3,8 @@
 #include <charconv>
 #include <stdexcept>
 #include <string>
+#include <optional>
+
 
 std::optional<uint8_t> ParseUint8(std::string_view s) {
 	uint8_t result;
