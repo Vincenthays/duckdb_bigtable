@@ -29,7 +29,7 @@ enum ProductColumn : column_t {
 	IS_PAID = 10
 };
 
-struct Product final {
+struct Product {
 	uint64_t pe_id;
 	uint32_t shop_id;
 	date_t date;
@@ -43,7 +43,7 @@ struct Product final {
 	vector<bool> is_paid;
 };
 
-struct ProductFunctionData final : TableFunctionData {
+struct ProductFunctionData : TableFunctionData {
 	vector<uint64_t> pe_ids;
 	vector<cbt::RowRange> ranges;
 };
@@ -87,7 +87,7 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 	return bind_data;
 }
 
-struct ProductGlobalState final : GlobalTableFunctionState {
+struct ProductGlobalState : GlobalTableFunctionState {
 	const cbt::Filter filter;
 	cbt::Table table;
 
@@ -116,7 +116,7 @@ unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, T
 	                                     std::move(input.column_ids));
 }
 
-struct ProductLocalState final : LocalTableFunctionState {
+struct ProductLocalState : LocalTableFunctionState {
 	idx_t remainder_idx = 0;
 	vector<Product> remainder;
 	std::array<std::optional<Product>, 7> product_week;

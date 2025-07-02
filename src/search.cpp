@@ -27,17 +27,17 @@ enum SearchColumn : column_t {
 };
 constexpr uint8_t MAX_POSITION = 200;
 
-struct Keyword final {
+struct Keyword {
 	uint32_t keyword_id;
 	uint32_t shop_id;
 	timestamp_t date;
 	uint8_t position;
-	std::optional<uint64_t> pe_id;
-	std::optional<string> retailer_p_id;
+	std::optional<uint64_t> pe_id = std::nullopt;
+	std::optional<string> retailer_p_id = std::nullopt;
 	bool is_paid = false;
 };
 
-struct SearchFunctionData final : TableFunctionData {
+struct SearchFunctionData : TableFunctionData {
 	vector<uint32_t> keyword_ids;
 	vector<cbt::RowRange> ranges;
 };
@@ -69,7 +69,7 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 	return bind_data;
 }
 
-struct SearchGlobalState final : GlobalTableFunctionState {
+struct SearchGlobalState : GlobalTableFunctionState {
 	const cbt::Filter filter;
 	cbt::Table table;
 	mutex lock;
@@ -96,7 +96,7 @@ unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, Ta
 	                                    std::move(input.column_ids));
 }
 
-struct SearchLocalState final : LocalTableFunctionState {
+struct SearchLocalState : LocalTableFunctionState {
 	idx_t remainder_idx = 0;
 	vector<Keyword> remainder;
 	std::unordered_map<uint32_t, Keyword> keyword_map;
@@ -154,17 +154,11 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
 				const int32_t hour = Timestamp::GetTime(timestamp).micros / 3'600'000'000;
 				const int32_t week_hour = weekday * 24 + hour;
-				const uint32_t map_key = week_hour * MAX_POSITION + (position - 1);
+				const uint32_t map_key = week_hour * MAX_POSITION + position - 1;
 
-				auto it = local_state.keyword_map.find(map_key);
-				if (it == local_state.keyword_map.end()) {
-					it = local_state.keyword_map
-					         .emplace(map_key, Keyword {keyword_id, shop_id, timestamp, position, std::nullopt,
-					                                    std::nullopt, false})
-					         .first;
-				}
-
-				auto &keyword = it->second;
+				auto &keyword =
+				    local_state.keyword_map.try_emplace(map_key, Keyword {keyword_id, shop_id, timestamp, position})
+				        .first->second;
 
 				switch (cell.family_name()[0]) {
 				case 'p':
