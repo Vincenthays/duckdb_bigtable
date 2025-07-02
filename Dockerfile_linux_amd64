@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.10
 
 RUN apt update && apt install -y ca-certificates build-essential cmake git curl zip unzip tar pkg-config ninja-build
 
