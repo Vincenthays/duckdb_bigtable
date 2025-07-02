@@ -77,17 +77,10 @@ struct SearchGlobalState : GlobalTableFunctionState {
 	const vector<uint32_t> keyword_ids;
 	const vector<cbt::RowRange> ranges;
 	const vector<column_t> column_ids;
-	const idx_t max_threads;
-
-	idx_t MaxThreads() const override {
-		return max_threads;
-	}
-
 	SearchGlobalState(vector<uint32_t> keyword_ids_p, vector<cbt::RowRange> ranges_p, vector<column_t> column_ids_p)
 	    : filter(make_filter(column_ids_p)), table(cbt::MakeDataConnection(Options {}.set<GrpcNumChannelsOption>(32)),
 	                                               cbt::TableResource("dataimpact-processing", "processing", "search")),
-	      keyword_ids(std::move(keyword_ids_p)), ranges(std::move(ranges_p)), column_ids(std::move(column_ids_p)),
-	      max_threads(ranges.size()) {};
+	      keyword_ids(std::move(keyword_ids_p)), ranges(std::move(ranges_p)), column_ids(std::move(column_ids_p)) {};
 };
 
 unique_ptr<GlobalTableFunctionState> SearchInitGlobal(ClientContext &context, TableFunctionInitInput &input) {

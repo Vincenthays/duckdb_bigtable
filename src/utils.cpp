@@ -6,7 +6,6 @@
 #include <charconv>
 #include <string_view>
 
-
 std::optional<uint8_t> ParseUint8(std::string_view s) {
 	uint8_t result;
 	auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), result);
