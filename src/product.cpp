@@ -293,7 +293,7 @@ double ProductScanProgress(ClientContext &context, const FunctionData *bind_data
 	return (100.0 * completed) / static_cast<double>(total_count);
 }
 
-static cbt::Filter make_filter(const vector<column_t> &column_ids) {
+inline static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 	set<string> families;
 
 	for (const auto &column_id : column_ids) {
