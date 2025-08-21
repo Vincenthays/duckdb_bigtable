@@ -1,7 +1,0 @@
-[
-  {
-    "directory": "/Users/HAVI1001/Workspace/extension-template",
-    "command": "/usr/bin/clang++ -I/Users/HAVI1001/Workspace/extension-template/duckdb/src/include -I/Users/HAVI1001/Workspace/extension-template/src/include -I/Users/HAVI1001/Workspace/extension-template/vcpkg_installed/arm64-osx/include -std=c++17 -stdlib=libc++ -O2 -g -Wall -Wextra -pedantic -fPIC -MMD -MF $file.d -o $file.o -c $file",
-    "file": "/Users/HAVI1001/Workspace/extension-template/src/bigtable2_extension.cpp"
-  }
-]
