@@ -4,29 +4,30 @@
 #include "search.hpp"
 #include "bigtable2_extension.hpp"
 #include "duckdb.hpp"
+#include "duckdb/common/exception.hpp"
 #include "duckdb/function/table_function.hpp"
-#include "duckdb/main/extension_util.hpp"
+#include "duckdb/main/extension/extension_loader.hpp"
 
 namespace duckdb {
 
-static void LoadInternal(DatabaseInstance &db) {
+static void LoadInternal(ExtensionLoader &loader) {
 	TableFunction product("product",
 	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
 	                      ProductFunction, ProductFunctionBind, ProductInitGlobal, ProductInitLocal);
 	product.projection_pushdown = true;
 	product.table_scan_progress = ProductScanProgress;
-	ExtensionUtil::RegisterFunction(db, product);
+	loader.RegisterFunction(product);
 
 	TableFunction search("search",
 	                     {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
 	                     SearchFunction, SearchFunctionBind, SearchInitGlobal, SearchInitLocal);
 	search.projection_pushdown = true;
 	search.table_scan_progress = SearchScanProgress;
-	ExtensionUtil::RegisterFunction(db, search);
+	loader.RegisterFunction(search);
 }
 
-void Bigtable2Extension::Load(DuckDB &db) {
-	LoadInternal(*db.instance);
+void Bigtable2Extension::Load(ExtensionLoader &loader) {
+	LoadInternal(loader);
 }
 
 std::string Bigtable2Extension::Name() {
@@ -45,13 +46,10 @@ std::string Bigtable2Extension::Version() const {
 
 extern "C" {
 
-DUCKDB_EXTENSION_API void bigtable2_init(duckdb::DatabaseInstance &db) {
-	LoadInternal(db);
+DUCKDB_CPP_EXTENSION_ENTRY(bigtable2, loader) {
+	duckdb::LoadInternal(loader);
 }
 
-DUCKDB_EXTENSION_API const char *bigtable2_version() {
-	return duckdb::DuckDB::LibraryVersion();
-}
 }
 
 #ifndef DUCKDB_EXTENSION_MAIN
