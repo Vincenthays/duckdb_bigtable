@@ -5,7 +5,6 @@
 #include "utils.hpp"
 #include "duckdb.hpp"
 #include "product.hpp"
-#include "duckdb/function/table_function.hpp"
 
 using ::google::cloud::GrpcNumChannelsOption;
 using ::google::cloud::Options;
