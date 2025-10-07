@@ -1,5 +1,4 @@
-DUCKDB_VERSION := "v1.4.1"
-
+DUCKDB_VERSION := `cd duckdb && git describe --tags`
 
 [macos]
 deploy:
