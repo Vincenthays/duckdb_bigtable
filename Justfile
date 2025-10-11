@@ -53,4 +53,4 @@ test_thread: debug
     ./build/debug/duckdb --init /dev/null -c "SET worker_threads TO 10; SELECT current_setting('external_threads') AS threads"
 
 test_so: debug
-    duckdb -init /dev/null -c "INSTALL '{justfile_directory()}/build/debug/extension/bigtable2/bigtable2.duckdb_extension';"
+    duckdb -init /dev/null -c "INSTALL '{{justfile_directory()}}/build/debug/extension/bigtable2/bigtable2.duckdb_extension';"
