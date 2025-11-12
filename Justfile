@@ -53,4 +53,4 @@ test_thread: debug
     ./build/debug/duckdb --init /dev/null -c "SET worker_threads TO 10; SELECT current_setting('external_threads') AS threads"
 
 test_so: debug
-    duckdb -init /dev/null -c "INSTALL '{{justfile_directory()}}/build/debug/extension/bigtable2/bigtable2.duckdb_extension';"
+    DYLD_INSERT_LIBRARIES=/Library/Developer/CommandLineTools/usr/lib/clang/17/lib/darwin/libclang_rt.asan_osx_dynamic.dylib duckdb -unsigned -init /dev/null -c "INSTALL '{{justfile_directory()}}/build/debug/extension/bigtable2/bigtable2.duckdb_extension'; LOAD bigtable2; FROM product(2024_20, 2024_20, [1124000100000]) LIMIT 1;"
