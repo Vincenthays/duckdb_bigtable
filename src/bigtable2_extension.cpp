@@ -49,7 +49,6 @@ extern "C" {
 DUCKDB_CPP_EXTENSION_ENTRY(bigtable2, loader) {
 	duckdb::LoadInternal(loader);
 }
-
 }
 
 #ifndef DUCKDB_EXTENSION_MAIN

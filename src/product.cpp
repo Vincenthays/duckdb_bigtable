@@ -143,8 +143,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			const auto &row = row_result.value();
 			std::string_view row_key = row.row_key();
 			const auto index = row_key.find_last_of('/');
-			const auto shop_id_sv = row_key.substr(index + 1);
-			auto shop_id_opt = ParseUint32(shop_id_sv);
+			const auto shop_id_opt = ParseUint32(row_key.substr(index + 1));
 			if (!shop_id_opt) {
 				continue;
 			}
@@ -162,9 +161,9 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 					product_day->date = date;
 				}
 
-				std::string_view family = cell.family_name();
-				std::string_view qualifier = cell.column_qualifier();
-				std::string_view value = cell.value();
+				const std::string_view family = cell.family_name();
+				const std::string_view qualifier = cell.column_qualifier();
+				const std::string_view value = cell.value();
 
 				switch (family[0]) {
 				case 'p':
@@ -187,7 +186,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 				case 's':
 				case 'S':
 					if (auto pos = ParseUint32(value)) {
-						product_day->shelf.emplace_back(string(qualifier));
+						product_day->shelf.emplace_back(qualifier);
 						product_day->position.emplace_back(*pos);
 						product_day->is_paid.emplace_back(family[0] == 'S');
 					}
@@ -204,8 +203,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 		}
 	}
 
-	const idx_t count =
-	    std::min((idx_t)STANDARD_VECTOR_SIZE, (idx_t)local_state.remainder.size() - local_state.remainder_idx);
+	const idx_t count = std::min((idx_t)STANDARD_VECTOR_SIZE, local_state.remainder.size() - local_state.remainder_idx);
 
 	if (count == 0) {
 		output.SetCardinality(0);
@@ -294,7 +292,7 @@ double ProductScanProgress(ClientContext &context, const FunctionData *bind_data
 inline static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 	set<string> families;
 
-	for (const auto &column_id : column_ids) {
+	for (const auto column_id : column_ids) {
 		switch (static_cast<ProductColumn>(column_id)) {
 		case ProductColumn::PRICE:
 		case ProductColumn::BASE_PRICE:
@@ -322,9 +320,8 @@ inline static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 
 	string regex;
 	for (const auto &family : families) {
-		if (!regex.empty()) {
-			regex += "|";
-		}
+		if (!regex.empty())
+			regex += '|';
 		regex += family;
 	}
 	return cbt::Filter::FamilyRegex(std::move(regex));

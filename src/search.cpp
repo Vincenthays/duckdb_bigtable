@@ -120,22 +120,22 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				throw std::runtime_error(row_result.status().message());
 			}
 			const auto &row = row_result.value();
-			std::string_view row_key = row.row_key();
+			const std::string_view row_key = row.row_key();
 			const auto index = row_key.find_last_of('/');
-			auto shop_id_opt = ParseUint32(row_key.substr(index + 1));
+			const auto shop_id_opt = ParseUint32(row_key.substr(index + 1));
 			if (!shop_id_opt) {
 				continue;
 			}
 			const auto shop_id = *shop_id_opt;
 
 			for (const auto &cell : row.cells()) {
-				auto position_opt = ParseUint8(cell.column_qualifier());
+				const auto position_opt = ParseUint8(cell.column_qualifier());
 				if (!position_opt || *position_opt == 0 || *position_opt > MAX_POSITION) {
 					continue;
 				}
 				const auto position = *position_opt;
 
-				std::string_view value = cell.value();
+				const std::string_view value = cell.value();
 				if (value.starts_with("id_ret_pos_")) {
 					continue;
 				}
@@ -173,8 +173,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 		}
 	}
 
-	const idx_t count =
-	    std::min((idx_t)STANDARD_VECTOR_SIZE, (idx_t)local_state.remainder.size() - local_state.remainder_idx);
+	const idx_t count = std::min((idx_t)STANDARD_VECTOR_SIZE, local_state.remainder.size() - local_state.remainder_idx);
 
 	if (count == 0) {
 		output.SetCardinality(0);
@@ -185,7 +184,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 	for (idx_t i = 0; i < count; i++) {
 		const auto &keyword = local_state.remainder[local_state.remainder_idx + i];
-		for (idx_t col_idx = 0; col_idx < global_state.column_ids.size(); ++col_idx) {
+		for (idx_t col_idx = 0; col_idx < global_state.column_ids.size(); col_idx++) {
 			auto &out_vec = output.data[col_idx];
 			const auto column_id = global_state.column_ids[col_idx];
 
@@ -233,7 +232,7 @@ double SearchScanProgress(ClientContext &context, const FunctionData *bind_data,
 inline static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 	set<string> families;
 
-	for (const auto &column_id : column_ids) {
+	for (const auto column_id : column_ids) {
 		switch (static_cast<SearchColumn>(column_id)) {
 		case SearchColumn::POSITION:
 		case SearchColumn::PE_ID:
@@ -255,9 +254,8 @@ inline static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 
 	string regex;
 	for (const auto &family : families) {
-		if (!regex.empty()) {
-			regex += "|";
-		}
+		if (!regex.empty())
+			regex += '|';
 		regex += family;
 	}
 	return cbt::Filter::FamilyRegex(std::move(regex));
