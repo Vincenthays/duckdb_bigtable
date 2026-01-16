@@ -1,10 +1,11 @@
+#include "product.hpp"
+
+#include "duckdb.hpp"
+#include "utils.hpp"
+
+#include <google/cloud/bigtable/table.h>
 #include <optional>
 #include <string_view>
-#include <google/cloud/bigtable/table.h>
-
-#include "utils.hpp"
-#include "duckdb.hpp"
-#include "product.hpp"
 
 using ::google::cloud::GrpcNumChannelsOption;
 using ::google::cloud::Options;
@@ -212,65 +213,120 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 		return;
 	}
 
-	for (idx_t i = 0; i < count; i++) {
-		const auto &product = local_state.remainder[local_state.remainder_idx + i];
-		for (idx_t col_idx = 0; col_idx < global_state.column_ids.size(); col_idx++) {
-			auto &out_vec = output.data[col_idx];
-			const auto column_id = global_state.column_ids[col_idx];
+	const auto *products = &local_state.remainder[local_state.remainder_idx];
 
-			switch (static_cast<ProductColumn>(column_id)) {
-			case ProductColumn::PE_ID:
-				out_vec.SetValue(i, Value::UBIGINT(product.pe_id));
-				break;
-			case ProductColumn::SHOP_ID:
-				out_vec.SetValue(i, Value::UINTEGER(product.shop_id));
-				break;
-			case ProductColumn::DATE:
-				out_vec.SetValue(i, Value::DATE(product.date));
-				break;
-			case ProductColumn::PRICE:
-				out_vec.SetValue(i, product.price ? Value::FLOAT(*product.price) : Value());
-				break;
-			case ProductColumn::BASE_PRICE:
-				out_vec.SetValue(i, product.base_price ? Value::FLOAT(*product.base_price) : Value());
-				break;
-			case ProductColumn::UNIT_PRICE:
-				out_vec.SetValue(i, product.unit_price ? Value::FLOAT(*product.unit_price) : Value());
-				break;
-			case ProductColumn::PROMO_ID:
-				out_vec.SetValue(i, product.promo_id ? Value::UINTEGER(*product.promo_id) : Value());
-				break;
-			case ProductColumn::PROMO_TEXT:
-				out_vec.SetValue(i, product.promo_text ? Value(*product.promo_text) : Value());
-				break;
-			case ProductColumn::SHELF: {
+	for (idx_t col_idx = 0; col_idx < global_state.column_ids.size(); col_idx++) {
+		auto &out_vec = output.data[col_idx];
+		const auto column_id = global_state.column_ids[col_idx];
+
+		switch (static_cast<ProductColumn>(column_id)) {
+		case ProductColumn::PE_ID: {
+			auto data_ptr = FlatVector::GetData<uint64_t>(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				data_ptr[i] = products[i].pe_id;
+			}
+			break;
+		}
+		case ProductColumn::SHOP_ID: {
+			auto data_ptr = FlatVector::GetData<uint32_t>(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				data_ptr[i] = products[i].shop_id;
+			}
+			break;
+		}
+		case ProductColumn::DATE: {
+			auto data_ptr = FlatVector::GetData<date_t>(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				data_ptr[i] = products[i].date;
+			}
+			break;
+		}
+		case ProductColumn::PRICE: {
+			auto data_ptr = FlatVector::GetData<float>(out_vec);
+			auto &validity = FlatVector::Validity(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				if (products[i].price) {
+					data_ptr[i] = *products[i].price;
+				} else {
+					validity.SetInvalid(i);
+				}
+			}
+			break;
+		}
+		case ProductColumn::BASE_PRICE: {
+			auto data_ptr = FlatVector::GetData<float>(out_vec);
+			auto &validity = FlatVector::Validity(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				if (products[i].base_price) {
+					data_ptr[i] = *products[i].base_price;
+				} else {
+					validity.SetInvalid(i);
+				}
+			}
+			break;
+		}
+		case ProductColumn::UNIT_PRICE: {
+			auto data_ptr = FlatVector::GetData<float>(out_vec);
+			auto &validity = FlatVector::Validity(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				if (products[i].unit_price) {
+					data_ptr[i] = *products[i].unit_price;
+				} else {
+					validity.SetInvalid(i);
+				}
+			}
+			break;
+		}
+		case ProductColumn::PROMO_ID: {
+			auto data_ptr = FlatVector::GetData<uint32_t>(out_vec);
+			auto &validity = FlatVector::Validity(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				if (products[i].promo_id) {
+					data_ptr[i] = *products[i].promo_id;
+				} else {
+					validity.SetInvalid(i);
+				}
+			}
+			break;
+		}
+		case ProductColumn::PROMO_TEXT:
+			for (idx_t i = 0; i < count; i++) {
+				out_vec.SetValue(i, products[i].promo_text ? Value(*products[i].promo_text) : Value());
+			}
+			break;
+		case ProductColumn::SHELF: {
+			for (idx_t i = 0; i < count; i++) {
 				vector<Value> vals;
-				vals.reserve(product.shelf.size());
-				for (const auto &s : product.shelf) {
+				vals.reserve(products[i].shelf.size());
+				for (const auto &s : products[i].shelf) {
 					vals.emplace_back(s);
 				}
 				out_vec.SetValue(i, Value::LIST(LogicalType::VARCHAR, std::move(vals)));
-				break;
 			}
-			case ProductColumn::POSITION: {
+			break;
+		}
+		case ProductColumn::POSITION: {
+			for (idx_t i = 0; i < count; i++) {
 				vector<Value> vals;
-				vals.reserve(product.position.size());
-				for (const auto &p : product.position) {
+				vals.reserve(products[i].position.size());
+				for (const auto &p : products[i].position) {
 					vals.emplace_back(Value::UINTEGER(p));
 				}
 				out_vec.SetValue(i, Value::LIST(LogicalType::UINTEGER, std::move(vals)));
-				break;
 			}
-			case ProductColumn::IS_PAID: {
+			break;
+		}
+		case ProductColumn::IS_PAID: {
+			for (idx_t i = 0; i < count; i++) {
 				vector<Value> vals;
-				vals.reserve(product.is_paid.size());
-				for (const auto &ip : product.is_paid) {
+				vals.reserve(products[i].is_paid.size());
+				for (const auto &ip : products[i].is_paid) {
 					vals.emplace_back(Value::BOOLEAN(ip));
 				}
 				out_vec.SetValue(i, Value::LIST(LogicalType::BOOLEAN, std::move(vals)));
-				break;
 			}
-			}
+			break;
+		}
 		}
 	}
 

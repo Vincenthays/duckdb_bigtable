@@ -1,11 +1,12 @@
+#include "search.hpp"
+
+#include "duckdb.hpp"
+#include "utils.hpp"
+
+#include <google/cloud/bigtable/table.h>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
-#include <google/cloud/bigtable/table.h>
-
-#include "duckdb.hpp"
-#include "search.hpp"
-#include "utils.hpp"
 
 using ::google::cloud::GrpcNumChannelsOption;
 using ::google::cloud::Options;
@@ -182,35 +183,63 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 		return;
 	}
 
-	for (idx_t i = 0; i < count; i++) {
-		const auto &keyword = local_state.remainder[local_state.remainder_idx + i];
-		for (idx_t col_idx = 0; col_idx < global_state.column_ids.size(); col_idx++) {
-			auto &out_vec = output.data[col_idx];
-			const auto column_id = global_state.column_ids[col_idx];
+	const auto *keywords = &local_state.remainder[local_state.remainder_idx];
 
-			switch (static_cast<SearchColumn>(column_id)) {
-			case SearchColumn::KEYWORD_ID:
-				out_vec.SetValue(i, Value::UINTEGER(keyword.keyword_id));
-				break;
-			case SearchColumn::SHOP_ID:
-				out_vec.SetValue(i, Value::UINTEGER(keyword.shop_id));
-				break;
-			case SearchColumn::DATE:
-				out_vec.SetValue(i, Value::TIMESTAMP(keyword.date));
-				break;
-			case SearchColumn::POSITION:
-				out_vec.SetValue(i, Value::UTINYINT(keyword.position));
-				break;
-			case SearchColumn::PE_ID:
-				out_vec.SetValue(i, keyword.pe_id ? Value::UBIGINT(*keyword.pe_id) : Value());
-				break;
-			case SearchColumn::RETAILER_P_ID:
-				out_vec.SetValue(i, keyword.retailer_p_id ? Value(*keyword.retailer_p_id) : Value());
-				break;
-			case SearchColumn::IS_PAID:
-				out_vec.SetValue(i, Value::BOOLEAN(keyword.is_paid));
-				break;
+	for (idx_t col_idx = 0; col_idx < global_state.column_ids.size(); col_idx++) {
+		auto &out_vec = output.data[col_idx];
+		const auto column_id = global_state.column_ids[col_idx];
+
+		switch (static_cast<SearchColumn>(column_id)) {
+		case SearchColumn::KEYWORD_ID: {
+			auto data_ptr = FlatVector::GetData<uint32_t>(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				data_ptr[i] = keywords[i].keyword_id;
 			}
+			break;
+		}
+		case SearchColumn::SHOP_ID: {
+			auto data_ptr = FlatVector::GetData<uint32_t>(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				data_ptr[i] = keywords[i].shop_id;
+			}
+			break;
+		}
+		case SearchColumn::DATE:
+			for (idx_t i = 0; i < count; i++) {
+				out_vec.SetValue(i, Value::TIMESTAMP(keywords[i].date));
+			}
+			break;
+		case SearchColumn::POSITION: {
+			auto data_ptr = FlatVector::GetData<uint8_t>(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				data_ptr[i] = keywords[i].position;
+			}
+			break;
+		}
+		case SearchColumn::PE_ID: {
+			auto data_ptr = FlatVector::GetData<uint64_t>(out_vec);
+			auto &validity = FlatVector::Validity(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				if (keywords[i].pe_id) {
+					data_ptr[i] = *keywords[i].pe_id;
+				} else {
+					validity.SetInvalid(i);
+				}
+			}
+			break;
+		}
+		case SearchColumn::RETAILER_P_ID:
+			for (idx_t i = 0; i < count; i++) {
+				out_vec.SetValue(i, keywords[i].retailer_p_id ? Value(*keywords[i].retailer_p_id) : Value());
+			}
+			break;
+		case SearchColumn::IS_PAID: {
+			auto data_ptr = FlatVector::GetData<bool>(out_vec);
+			for (idx_t i = 0; i < count; i++) {
+				data_ptr[i] = keywords[i].is_paid;
+			}
+			break;
+		}
 		}
 	}
 
