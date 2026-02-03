@@ -4,7 +4,7 @@ deploy:
     cat build/release/extension/bigtable2/bigtable2.duckdb_extension | gzip | gsutil cp - gs://di_duckdb_extension/{{DUCKDB_VERSION}}/osx_arm64/bigtable2.duckdb_extension.gz
 
 [linux]
-deploy {DUCKDB_VERSION}:
+deploy DUCKDB_VERSION:
     #!/usr/bin/env sh
     git reset --hard origin
     git pull
