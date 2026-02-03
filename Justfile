@@ -1,16 +1,18 @@
-DUCKDB_VERSION := `cd duckdb && git describe --tags`
-
 [macos]
 deploy:
     VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make
     cat build/release/extension/bigtable2/bigtable2.duckdb_extension | gzip | gsutil cp - gs://di_duckdb_extension/{{DUCKDB_VERSION}}/osx_arm64/bigtable2.duckdb_extension.gz
 
 [linux]
-deploy:
+deploy {DUCKDB_VERSION}:
     #!/usr/bin/env sh
     git reset --hard origin
     git pull
     git submodule update --init --recursive
+
+    cd duckdb
+    git checkout "tags/v{{DUCKDB_VERSION}}" || exit 1
+    cd ..
 
     docker build -f Dockerfile_linux_amd64_musl -t duckdb_extension_linux_amd64_musl .
     docker run -i -v /home/dataimpact/gs.json:/app/gs.json duckdb_extension_linux_amd64_musl bash <<EOF
