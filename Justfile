@@ -4,26 +4,26 @@ deploy:
     cat build/release/extension/bigtable2/bigtable2.duckdb_extension | gzip | gsutil cp - gs://di_duckdb_extension/{{DUCKDB_VERSION}}/osx_arm64/bigtable2.duckdb_extension.gz
 
 [linux]
-deploy duckdb_version:
+deploy DUCKDB_VERSION:
     #!/usr/bin/env sh
     git reset --hard origin
     git pull
     git submodule update --init --recursive
 
     cd duckdb
-    git checkout "tags/v{{duckdb_version}}" || exit 1
+    git checkout "tags/v{{DUCKDB_VERSION}}" || exit 1
     cd ..
 
     docker build -f Dockerfile_linux_amd64_musl -t duckdb_extension_linux_amd64_musl .
     docker run -i -v /home/dataimpact/gs.json:/app/gs.json duckdb_extension_linux_amd64_musl bash <<EOF
         gcloud auth activate-service-account --key-file /app/gs.json
-        gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/v{{duckdb_version}}/linux_amd64_musl/bigtable2.duckdb_extension.gz
+        gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/v{{DUCKDB_VERSION}}/linux_amd64_musl/bigtable2.duckdb_extension.gz
     EOF
 
     docker build -f Dockerfile_linux_amd64 -t duckdb_extension_linux_amd64 .
     docker run -i -v /home/dataimpact/gs.json:/app/gs.json duckdb_extension_linux_amd64 bash <<EOF
         gcloud auth activate-service-account --key-file /app/gs.json
-        gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/v{{duckdb_version}}/linux_amd64/bigtable2.duckdb_extension.gz
+        gsutil cp bigtable2.duckdb_extension.gz gs://di_duckdb_extension/v{{DUCKDB_VERSION}}/linux_amd64/bigtable2.duckdb_extension.gz
     EOF
 
 debug:
