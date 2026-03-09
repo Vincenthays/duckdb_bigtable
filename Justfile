@@ -2,7 +2,7 @@
 deploy DUCKDB_VERSION:
     cd duckdb
     git pull
-    git fetch --tags
+    git fetch --all --tags
     git checkout "tags/v{{DUCKDB_VERSION}}" || exit 1
     cd ..
 
