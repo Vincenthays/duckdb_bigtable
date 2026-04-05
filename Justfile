@@ -9,6 +9,7 @@ deploy DUCKDB_VERSION:
     git reset --hard origin
     git pull
     git submodule update --init --recursive
+    git fetch --tags --recurse-submodules
 
     cd duckdb
     git checkout "tags/v{{DUCKDB_VERSION}}" || exit 1
