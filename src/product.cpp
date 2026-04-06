@@ -38,7 +38,7 @@ struct Product {
 	std::optional<uint32_t> promo_id;
 	std::optional<string> promo_text;
 	vector<string> shelf;
-	vector<uint32_t> position;
+	vector<uint16_t> position;
 	vector<bool> is_paid;
 };
 
@@ -63,7 +63,7 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 	                LogicalType::UINTEGER,
 	                LogicalType::VARCHAR,
 	                LogicalType::LIST(LogicalType::VARCHAR),
-	                LogicalType::LIST(LogicalType::UINTEGER),
+	                LogicalType::LIST(LogicalType::USMALLINT),
 	                LogicalType::LIST(LogicalType::BOOLEAN)};
 
 	auto bind_data = make_uniq<ProductFunctionData>();
@@ -190,7 +190,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 					break;
 				case 's':
 				case 'S':
-					if (auto pos = ParseUint32(value)) {
+					if (auto pos = ParseUint16(value)) {
 						product_day->shelf.emplace_back(qualifier);
 						product_day->position.emplace_back(*pos);
 						product_day->is_paid.emplace_back(family[0] == 'S');
@@ -314,9 +314,9 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 				vector<Value> vals;
 				vals.reserve(products[i].position.size());
 				for (const auto &p : products[i].position) {
-					vals.emplace_back(Value::UINTEGER(p));
+					vals.emplace_back(Value::USMALLINT(p));
 				}
-				out_vec.SetValue(i, Value::LIST(LogicalType::UINTEGER, std::move(vals)));
+				out_vec.SetValue(i, Value::LIST(LogicalType::USMALLINT, std::move(vals)));
 			}
 			break;
 		}
@@ -378,7 +378,7 @@ unique_ptr<BaseStatistics> ProductStatistics(ClientContext &context, const Funct
 		return make_uniq<BaseStatistics>(std::move(stats));
 	}
 	case ProductColumn::POSITION: {
-		auto stats = BaseStatistics::CreateUnknown(LogicalType::LIST(LogicalType::UINTEGER));
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::LIST(LogicalType::USMALLINT));
 		stats.SetHasNoNullFast();
 		return make_uniq<BaseStatistics>(std::move(stats));
 	}

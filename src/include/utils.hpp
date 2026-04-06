@@ -10,6 +10,9 @@
 // Parses a string_view into an optional uint8_t.
 std::optional<uint8_t> ParseUint8(std::string_view s);
 
+// Parses a string_view into an optional uint16_t.
+std::optional<uint16_t> ParseUint16(std::string_view s);
+
 // Parses a string_view into an optional uint32_t.
 std::optional<uint32_t> ParseUint32(std::string_view s);
 
