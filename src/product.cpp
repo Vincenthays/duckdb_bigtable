@@ -23,7 +23,7 @@ enum ProductColumn : column_t {
 	UNIT_PRICE = 5,
 	PROMO_ID = 6,
 	PROMO_TEXT = 7,
-	SHELF = 8,
+	SHELF_ID = 8,
 	POSITION = 9,
 	IS_PAID = 10
 };
@@ -52,7 +52,7 @@ static cbt::Filter make_filter(const vector<column_t> &column_ids);
 unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
                                              vector<LogicalType> &return_types, vector<string> &names) {
 	names = {"pe_id",    "shop_id",    "date",  "price",    "base_price", "unit_price",
-	         "promo_id", "promo_text", "shelf", "position", "is_paid"};
+	         "promo_id", "promo_text", "shelf_id", "position", "is_paid"};
 
 	return_types = {LogicalType::UBIGINT,
 	                LogicalType::UINTEGER,
@@ -298,7 +298,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 				out_vec.SetValue(i, products[i].promo_text ? Value(*products[i].promo_text) : Value());
 			}
 			break;
-		case ProductColumn::SHELF: {
+		case ProductColumn::SHELF_ID: {
 			for (idx_t i = 0; i < count; i++) {
 				vector<Value> vals;
 				vals.reserve(products[i].shelf.size());
@@ -372,7 +372,7 @@ unique_ptr<BaseStatistics> ProductStatistics(ClientContext &context, const Funct
 		stats.SetHasNoNullFast();
 		return make_uniq<BaseStatistics>(std::move(stats));
 	}
-	case ProductColumn::SHELF: {
+	case ProductColumn::SHELF_ID: {
 		auto stats = BaseStatistics::CreateUnknown(LogicalType::LIST(LogicalType::VARCHAR));
 		stats.SetHasNoNullFast();
 		return make_uniq<BaseStatistics>(std::move(stats));
@@ -406,7 +406,7 @@ inline static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 		case ProductColumn::PROMO_TEXT:
 			families.emplace("d");
 			break;
-		case ProductColumn::SHELF:
+		case ProductColumn::SHELF_ID:
 		case ProductColumn::POSITION:
 		case ProductColumn::IS_PAID:
 			families.emplace("s|S");
