@@ -16,6 +16,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	                      ProductFunction, ProductFunctionBind, ProductInitGlobal, ProductInitLocal);
 	product.projection_pushdown = true;
 	product.table_scan_progress = ProductScanProgress;
+	product.statistics = ProductStatistics;
 	loader.RegisterFunction(product);
 
 	TableFunction search("search",
@@ -23,6 +24,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 	                     SearchFunction, SearchFunctionBind, SearchInitGlobal, SearchInitLocal);
 	search.projection_pushdown = true;
 	search.table_scan_progress = SearchScanProgress;
+	search.statistics = SearchStatistics;
 	loader.RegisterFunction(search);
 }
 

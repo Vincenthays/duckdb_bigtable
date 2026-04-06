@@ -16,4 +16,8 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 double SearchScanProgress(ClientContext &context, const FunctionData *bind_data,
                           const GlobalTableFunctionState *global_state);
+
+unique_ptr<BaseStatistics> SearchStatistics(ClientContext &context, const FunctionData *bind_data,
+                                            column_t column_index);
+
 } // namespace duckdb

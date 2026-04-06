@@ -349,6 +349,49 @@ double ProductScanProgress(ClientContext &context, const FunctionData *bind_data
 	return (100.0 * completed) / static_cast<double>(total_count);
 }
 
+unique_ptr<BaseStatistics> ProductStatistics(ClientContext &context, const FunctionData *bind_data,
+                                             column_t column_index) {
+	const auto &data = bind_data->Cast<ProductFunctionData>();
+	switch (static_cast<ProductColumn>(column_index)) {
+	case ProductColumn::PE_ID: {
+		if (data.pe_ids.empty()) return nullptr;
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::UBIGINT);
+		stats.SetHasNoNullFast();
+		const auto [min_it, max_it] = std::minmax_element(data.pe_ids.begin(), data.pe_ids.end());
+		NumericStats::SetMin<uint64_t>(stats, *min_it);
+		NumericStats::SetMax<uint64_t>(stats, *max_it);
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	case ProductColumn::SHOP_ID: {
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::UINTEGER);
+		stats.SetHasNoNullFast();
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	case ProductColumn::DATE: {
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::DATE);
+		stats.SetHasNoNullFast();
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	case ProductColumn::SHELF: {
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::LIST(LogicalType::VARCHAR));
+		stats.SetHasNoNullFast();
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	case ProductColumn::POSITION: {
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::LIST(LogicalType::UINTEGER));
+		stats.SetHasNoNullFast();
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	case ProductColumn::IS_PAID: {
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::LIST(LogicalType::BOOLEAN));
+		stats.SetHasNoNullFast();
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	default:
+		return nullptr;
+	}
+}
+
 inline static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 	set<string> families;
 

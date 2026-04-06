@@ -262,6 +262,44 @@ double SearchScanProgress(ClientContext &context, const FunctionData *bind_data,
 	return (100.0 * completed) / static_cast<double>(total_count);
 }
 
+unique_ptr<BaseStatistics> SearchStatistics(ClientContext &context, const FunctionData *bind_data,
+                                            column_t column_index) {
+	const auto &data = bind_data->Cast<SearchFunctionData>();
+	switch (static_cast<SearchColumn>(column_index)) {
+	case SearchColumn::KEYWORD_ID: {
+		if (data.keyword_ids.empty()) return nullptr;
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::UINTEGER);
+		stats.SetHasNoNullFast();
+		const auto [min_it, max_it] = std::minmax_element(data.keyword_ids.begin(), data.keyword_ids.end());
+		NumericStats::SetMin<uint32_t>(stats, *min_it);
+		NumericStats::SetMax<uint32_t>(stats, *max_it);
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	case SearchColumn::SHOP_ID: {
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::UINTEGER);
+		stats.SetHasNoNullFast();
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	case SearchColumn::DATE: {
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::TIMESTAMP_S);
+		stats.SetHasNoNullFast();
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	case SearchColumn::POSITION: {
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::UTINYINT);
+		stats.SetHasNoNullFast();
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	case SearchColumn::IS_PAID: {
+		auto stats = BaseStatistics::CreateUnknown(LogicalType::BOOLEAN);
+		stats.SetHasNoNullFast();
+		return make_uniq<BaseStatistics>(std::move(stats));
+	}
+	default:
+		return nullptr;
+	}
+}
+
 inline static cbt::Filter make_filter(const vector<column_t> &column_ids) {
 	set<string> families;
 

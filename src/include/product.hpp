@@ -19,4 +19,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 double ProductScanProgress(ClientContext &context, const FunctionData *bind_data,
                            const GlobalTableFunctionState *global_state);
+
+unique_ptr<BaseStatistics> ProductStatistics(ClientContext &context, const FunctionData *bind_data,
+                                             column_t column_index);
+
 } // namespace duckdb
