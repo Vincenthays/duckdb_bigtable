@@ -293,42 +293,65 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			}
 			break;
 		}
-		case ProductColumn::PROMO_TEXT:
+		case ProductColumn::PROMO_TEXT: {
+			auto *data_ptr = FlatVector::GetData<string_t>(out_vec);
+			auto &validity = FlatVector::Validity(out_vec);
 			for (idx_t i = 0; i < count; i++) {
-				out_vec.SetValue(i, products[i].promo_text ? Value(*products[i].promo_text) : Value());
+				if (products[i].promo_text) {
+					data_ptr[i] = StringVector::AddString(out_vec, *products[i].promo_text);
+				} else {
+					validity.SetInvalid(i);
+				}
 			}
 			break;
+		}
 		case ProductColumn::SHELF_ID: {
+			auto *list_data = FlatVector::GetData<list_entry_t>(out_vec);
+			idx_t total = 0;
+			for (idx_t i = 0; i < count; i++) total += products[i].shelf.size();
+			ListVector::Reserve(out_vec, total);
+			auto &child = ListVector::GetEntry(out_vec);
+			auto *child_data = FlatVector::GetData<string_t>(child);
+			idx_t offset = 0;
 			for (idx_t i = 0; i < count; i++) {
-				vector<Value> vals;
-				vals.reserve(products[i].shelf.size());
+				list_data[i] = {offset, products[i].shelf.size()};
 				for (const auto &s : products[i].shelf) {
-					vals.emplace_back(s);
+					child_data[offset++] = StringVector::AddString(child, s);
 				}
-				out_vec.SetValue(i, Value::LIST(LogicalType::VARCHAR, std::move(vals)));
 			}
+			ListVector::SetListSize(out_vec, total);
 			break;
 		}
 		case ProductColumn::POSITION: {
+			auto *list_data = FlatVector::GetData<list_entry_t>(out_vec);
+			idx_t total = 0;
+			for (idx_t i = 0; i < count; i++) total += products[i].position.size();
+			ListVector::Reserve(out_vec, total);
+			auto *child_data = FlatVector::GetData<uint16_t>(ListVector::GetEntry(out_vec));
+			idx_t offset = 0;
 			for (idx_t i = 0; i < count; i++) {
-				vector<Value> vals;
-				vals.reserve(products[i].position.size());
-				for (const auto &p : products[i].position) {
-					vals.emplace_back(Value::USMALLINT(p));
+				list_data[i] = {offset, products[i].position.size()};
+				for (const auto p : products[i].position) {
+					child_data[offset++] = p;
 				}
-				out_vec.SetValue(i, Value::LIST(LogicalType::USMALLINT, std::move(vals)));
 			}
+			ListVector::SetListSize(out_vec, total);
 			break;
 		}
 		case ProductColumn::IS_PAID: {
+			auto *list_data = FlatVector::GetData<list_entry_t>(out_vec);
+			idx_t total = 0;
+			for (idx_t i = 0; i < count; i++) total += products[i].is_paid.size();
+			ListVector::Reserve(out_vec, total);
+			auto *child_data = FlatVector::GetData<bool>(ListVector::GetEntry(out_vec));
+			idx_t offset = 0;
 			for (idx_t i = 0; i < count; i++) {
-				vector<Value> vals;
-				vals.reserve(products[i].is_paid.size());
-				for (const auto &ip : products[i].is_paid) {
-					vals.emplace_back(Value::BOOLEAN(ip));
+				list_data[i] = {offset, products[i].is_paid.size()};
+				for (idx_t j = 0; j < products[i].is_paid.size(); j++) {
+					child_data[offset++] = products[i].is_paid[j];
 				}
-				out_vec.SetValue(i, Value::LIST(LogicalType::BOOLEAN, std::move(vals)));
 			}
+			ListVector::SetListSize(out_vec, total);
 			break;
 		}
 		}

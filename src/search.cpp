@@ -208,11 +208,13 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			}
 			break;
 		}
-		case SearchColumn::DATE:
+		case SearchColumn::DATE: {
+			auto *data_ptr = FlatVector::GetData<timestamp_t>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
-				out_vec.SetValue(i, Value::TIMESTAMP(keywords[i].date));
+				data_ptr[i] = timestamp_t(Timestamp::GetEpochSeconds(keywords[i].date));
 			}
 			break;
+		}
 		case SearchColumn::POSITION: {
 			auto data_ptr = FlatVector::GetData<uint8_t>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
@@ -232,11 +234,18 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			}
 			break;
 		}
-		case SearchColumn::RETAILER_P_ID:
+		case SearchColumn::RETAILER_P_ID: {
+			auto *data_ptr = FlatVector::GetData<string_t>(out_vec);
+			auto &validity = FlatVector::Validity(out_vec);
 			for (idx_t i = 0; i < count; i++) {
-				out_vec.SetValue(i, keywords[i].retailer_p_id ? Value(*keywords[i].retailer_p_id) : Value());
+				if (keywords[i].retailer_p_id) {
+					data_ptr[i] = StringVector::AddString(out_vec, *keywords[i].retailer_p_id);
+				} else {
+					validity.SetInvalid(i);
+				}
 			}
 			break;
+		}
 		case SearchColumn::IS_PAID: {
 			auto data_ptr = FlatVector::GetData<bool>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
