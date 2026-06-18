@@ -104,7 +104,7 @@ struct SearchGlobalState : GlobalTableFunctionState {
 	      keyword_ids(std::move(keyword_ids_p)), ranges(std::move(ranges_p)), column_ids(std::move(column_ids_p)) {};
 
 	idx_t MaxThreads() const override {
-		return keyword_ids.size();
+		return ranges.size();
 	}
 };
 

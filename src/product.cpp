@@ -124,7 +124,7 @@ struct ProductGlobalState : GlobalTableFunctionState {
 	      pe_ids(std::move(pe_ids_p)), ranges(std::move(ranges_p)), column_ids(std::move(column_ids_p)) {};
 
 	idx_t MaxThreads() const override {
-		return pe_ids.size();
+		return ranges.size();
 	}
 };
 
