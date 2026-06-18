@@ -38,6 +38,7 @@ struct Keyword {
 
 struct SearchFunctionData : TableFunctionData {
 	vector<uint32_t> keyword_ids;
+	vector<uint32_t> shop_ids;
 	vector<cbt::RowRange> ranges;
 };
 
@@ -55,16 +56,37 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 	const auto &ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
 
 	bind_data->keyword_ids.reserve(ls_keyword_id.size());
-	bind_data->ranges.reserve(ls_keyword_id.size());
 
-	for (const auto &k : ls_keyword_id) {
-		const auto keyword_id = IntegerValue::Get(k);
-		string prefix_id = std::to_string(keyword_id);
-		std::reverse(prefix_id.begin(), prefix_id.end());
-		bind_data->keyword_ids.push_back(keyword_id);
-		bind_data->ranges.emplace_back(
-		    cbt::RowRange::Closed(prefix_id + "/" + week_start + "/", prefix_id + "/" + week_end + "0"));
+	for (const auto &p : ls_keyword_id) {
+		bind_data->keyword_ids.emplace_back(IntegerValue::Get(p));
 	}
+
+	if (input.inputs.size() == 4) {
+		const auto &ls_shop_id = ListValue::GetChildren(input.inputs[3]);
+		bind_data->shop_ids.reserve(ls_shop_id.size());
+		bind_data->ranges.reserve(ls_keyword_id.size() * ls_shop_id.size());
+
+		for (const auto &s : ls_shop_id) {
+			const auto shop_id = IntegerValue::Get(s);
+			bind_data->shop_ids.emplace_back(shop_id);
+
+			for (const auto &p : bind_data->keyword_ids) {
+				string prefix_id = std::to_string(p);
+				std::reverse(prefix_id.begin(), prefix_id.end());
+				const auto row_key = prefix_id + "/" + week_start + "/" + std::to_string(shop_id);
+				bind_data->ranges.emplace_back(cbt::RowRange::Closed(row_key, row_key));
+			}
+		}
+	} else {
+		for (const auto &p : bind_data->keyword_ids) {
+			string prefix_id = std::to_string(p);
+			std::reverse(prefix_id.begin(), prefix_id.end());
+			const auto row_start = prefix_id + "/" + week_start + "/";
+			const auto row_end = prefix_id + "/" + week_end + "0";
+			bind_data->ranges.emplace_back(cbt::RowRange::Closed(row_start, row_end));
+		}
+	}
+
 	return bind_data;
 }
 

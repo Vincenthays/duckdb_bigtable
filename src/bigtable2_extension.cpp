@@ -38,6 +38,15 @@ static void LoadInternal(ExtensionLoader &loader) {
 		search.statistics = SearchStatistics;
 		loader.RegisterFunction(search);
 	}
+	{
+		TableFunction search("search",
+			{LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER), LogicalType::LIST(LogicalType::BIGINT)},
+			SearchFunction, SearchFunctionBind, SearchInitGlobal, SearchInitLocal);
+		search.projection_pushdown = true;
+		search.table_scan_progress = SearchScanProgress;
+		search.statistics = SearchStatistics;
+		loader.RegisterFunction(search);
+	}
 }
 
 void Bigtable2Extension::Load(ExtensionLoader &loader) {

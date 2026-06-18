@@ -46,6 +46,7 @@ test_product: debug
 
 test_search: debug
     ./build/debug/duckdb --init /dev/null -c "FROM search(2024_48, 2024_48, [130000]) ORDER BY keyword_id, shop_id, date, position"
+    ./build/debug/duckdb --init /dev/null -c "FROM search(2024_48, 2024_48, [130000], [131693]) ORDER BY keyword_id, shop_id, date, position"
 
 bench: release
     ./build/release/duckdb --init /dev/null -c ".timer on" \
