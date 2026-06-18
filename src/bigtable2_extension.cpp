@@ -11,21 +11,33 @@
 namespace duckdb {
 
 static void LoadInternal(ExtensionLoader &loader) {
-	TableFunction product("product",
-	                      {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
-	                      ProductFunction, ProductFunctionBind, ProductInitGlobal, ProductInitLocal);
-	product.projection_pushdown = true;
-	product.table_scan_progress = ProductScanProgress;
-	product.statistics = ProductStatistics;
-	loader.RegisterFunction(product);
-
-	TableFunction search("search",
-	                     {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
-	                     SearchFunction, SearchFunctionBind, SearchInitGlobal, SearchInitLocal);
-	search.projection_pushdown = true;
-	search.table_scan_progress = SearchScanProgress;
-	search.statistics = SearchStatistics;
-	loader.RegisterFunction(search);
+	{
+		TableFunction product("product", 
+			{LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT)},
+	    	ProductFunction, ProductFunctionBind, ProductInitGlobal, ProductInitLocal);
+		product.projection_pushdown = true;
+		product.table_scan_progress = ProductScanProgress;
+		product.statistics = ProductStatistics;
+		loader.RegisterFunction(product);
+	}
+	{
+		TableFunction product("product", 
+			{LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::BIGINT), LogicalType::LIST(LogicalType::BIGINT)},
+	    	ProductFunction, ProductFunctionBind, ProductInitGlobal, ProductInitLocal);
+		product.projection_pushdown = true;
+		product.table_scan_progress = ProductScanProgress;
+		product.statistics = ProductStatistics;
+		loader.RegisterFunction(product);
+	}
+	{
+		TableFunction search("search",
+			{LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::INTEGER)},
+			SearchFunction, SearchFunctionBind, SearchInitGlobal, SearchInitLocal);
+		search.projection_pushdown = true;
+		search.table_scan_progress = SearchScanProgress;
+		search.statistics = SearchStatistics;
+		loader.RegisterFunction(search);
+	}
 }
 
 void Bigtable2Extension::Load(ExtensionLoader &loader) {
