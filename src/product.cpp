@@ -95,6 +95,8 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 			}
 		}
 	} else {
+		bind_data->ranges.reserve(ls_pe_id.size());
+
 		for (const auto &p : bind_data->pe_ids) {
 			string prefix_id = std::to_string(p);
 			std::reverse(prefix_id.begin(), prefix_id.end());

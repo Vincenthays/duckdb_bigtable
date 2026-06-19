@@ -78,6 +78,8 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 			}
 		}
 	} else {
+		bind_data->ranges.reserve(ls_keyword_id.size());
+
 		for (const auto &p : bind_data->keyword_ids) {
 			string prefix_id = std::to_string(p);
 			std::reverse(prefix_id.begin(), prefix_id.end());
