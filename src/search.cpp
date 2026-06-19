@@ -54,37 +54,39 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 	const auto week_start = std::to_string(IntegerValue::Get(input.inputs[0]));
 	const auto week_end = std::to_string(IntegerValue::Get(input.inputs[1]));
 	const auto &ls_keyword_id = ListValue::GetChildren(input.inputs[2]);
-
+	
+	vector<string> prefix_ids;
+	prefix_ids.reserve(ls_keyword_id.size());
 	bind_data->keyword_ids.reserve(ls_keyword_id.size());
 
 	for (const auto &p : ls_keyword_id) {
-		bind_data->keyword_ids.emplace_back(IntegerValue::Get(p));
+		const auto keyword_id = IntegerValue::Get(p);
+		bind_data->keyword_ids.emplace_back(keyword_id);
+		string prefix_id = std::to_string(keyword_id);
+		std::reverse(prefix_id.begin(), prefix_id.end());
+		prefix_ids.emplace_back(std::move(prefix_id));
 	}
 
 	if (input.inputs.size() == 4) {
 		const auto &ls_shop_id = ListValue::GetChildren(input.inputs[3]);
 		bind_data->shop_ids.reserve(ls_shop_id.size());
-		bind_data->ranges.reserve(ls_keyword_id.size() * ls_shop_id.size());
+		bind_data->ranges.reserve(prefix_ids.size() * ls_shop_id.size());
 
 		for (const auto &s : ls_shop_id) {
 			const auto shop_id = IntegerValue::Get(s);
 			bind_data->shop_ids.emplace_back(shop_id);
 
-			for (const auto &p : bind_data->keyword_ids) {
-				string prefix_id = std::to_string(p);
-				std::reverse(prefix_id.begin(), prefix_id.end());
-				const auto row_key = prefix_id + "/" + week_start + "/" + std::to_string(shop_id);
+			for (const auto &p : prefix_ids) {
+				const auto row_key = p + "/" + week_start + "/" + std::to_string(shop_id);
 				bind_data->ranges.emplace_back(cbt::RowRange::Closed(row_key, row_key));
 			}
 		}
 	} else {
-		bind_data->ranges.reserve(ls_keyword_id.size());
+		bind_data->ranges.reserve(prefix_ids.size());
 
-		for (const auto &p : bind_data->keyword_ids) {
-			string prefix_id = std::to_string(p);
-			std::reverse(prefix_id.begin(), prefix_id.end());
-			const auto row_start = prefix_id + "/" + week_start + "/";
-			const auto row_end = prefix_id + "/" + week_end + "0";
+		for (const auto &p : prefix_ids) {
+			const auto row_start = p + "/" + week_start + "/";
+			const auto row_end = p + "/" + week_end + "0";
 			bind_data->ranges.emplace_back(cbt::RowRange::Closed(row_start, row_end));
 		}
 	}
