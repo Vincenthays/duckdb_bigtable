@@ -313,6 +313,11 @@ unique_ptr<BaseStatistics> SearchStatistics(ClientContext &context, const Functi
 	case SearchColumn::SHOP_ID: {
 		auto stats = BaseStatistics::CreateUnknown(LogicalType::UINTEGER);
 		stats.SetHasNoNullFast();
+		if (!data.shop_ids.empty()) {
+			const auto [min_it, max_it] = std::minmax_element(data.shop_ids.begin(), data.shop_ids.end());
+			NumericStats::SetMin<uint32_t>(stats, *min_it);
+			NumericStats::SetMax<uint32_t>(stats, *max_it);
+		}
 		return make_uniq<BaseStatistics>(std::move(stats));
 	}
 	case SearchColumn::DATE: {
