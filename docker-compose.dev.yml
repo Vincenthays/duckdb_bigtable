@@ -1,0 +1,30 @@
+services:
+  build-linux-amd64:
+    build:
+      context: .
+      dockerfile: Dockerfile_linux_amd64
+      cache_from:
+        - type=gha
+      cache_to:
+        - type=gha,mode=max
+    image: bigtable2-dev-linux-amd64
+    command: >
+      sh -lc "mkdir -p /out &&
+      cp /app/bigtable2.duckdb_extension.gz /out/bigtable2.duckdb_extension-linux_amd64.gz"
+    volumes:
+      - ./dist:/out
+
+  build-linux-amd64-musl:
+    build:
+      context: .
+      dockerfile: Dockerfile_linux_amd64_musl
+      cache_from:
+        - type=gha
+      cache_to:
+        - type=gha,mode=max
+    image: bigtable2-dev-linux-amd64-musl
+    command: >
+      sh -lc "mkdir -p /out &&
+      cp /app/bigtable2.duckdb_extension.gz /out/bigtable2.duckdb_extension-linux_amd64_musl.gz"
+    volumes:
+      - ./dist:/out
