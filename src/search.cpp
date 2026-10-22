@@ -1,6 +1,7 @@
 #include "search.hpp"
 
 #include "duckdb.hpp"
+#include "duckdb/common/vector/list_vector.hpp"
 #include "utils.hpp"
 
 #include <google/cloud/bigtable/table.h>
@@ -45,7 +46,7 @@ struct SearchFunctionData : TableFunctionData {
 static cbt::Filter make_filter(const vector<column_t> &column_ids);
 
 unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctionBindInput &input,
-                                            vector<LogicalType> &return_types, vector<string> &names) {
+                                            vector<LogicalType> &return_types, vector<Identifier> &names) {
 	names = {"keyword_id", "shop_id", "date", "position", "pe_id", "retailer_p_id", "is_paid"};
 	return_types = {LogicalType::UINTEGER, LogicalType::UINTEGER, LogicalType::TIMESTAMP_S, LogicalType::UTINYINT,
 	                LogicalType::UBIGINT,  LogicalType::VARCHAR,  LogicalType::BOOLEAN};
@@ -73,7 +74,7 @@ unique_ptr<FunctionData> SearchFunctionBind(ClientContext &context, TableFunctio
 		bind_data->ranges.reserve(prefix_ids.size() * ls_shop_id.size());
 
 		for (const auto &s : ls_shop_id) {
-			const auto shop_id = IntegerValue::Get(s);
+			const auto shop_id = BigIntValue::Get(s);
 			bind_data->shop_ids.emplace_back(shop_id);
 
 			for (const auto &p : prefix_ids) {
@@ -174,7 +175,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 				const timestamp_t timestamp = Timestamp::FromEpochMicroSeconds(cell.timestamp().count());
 				const date_t date = Timestamp::GetDate(timestamp);
 				const int32_t weekday = Date::ExtractISODayOfTheWeek(date) - 1;
-				const int32_t hour = Timestamp::GetTime(timestamp).micros / 3'600'000'000;
+				const int32_t hour = Timestamp::GetTime(timestamp).value / 3'600'000'000;
 				const int32_t week_hour = weekday * 24 + hour;
 				const uint32_t map_key = week_hour * MAX_POSITION + position - 1;
 
@@ -207,7 +208,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	const idx_t count = std::min((idx_t)STANDARD_VECTOR_SIZE, local_state.remainder.size() - local_state.remainder_idx);
 
 	if (count == 0) {
-		output.SetCardinality(0);
+		output.SetChildCardinality(0);
 		local_state.remainder_idx = 0;
 		local_state.remainder.clear();
 		return;
@@ -221,36 +222,36 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 
 		switch (static_cast<SearchColumn>(column_id)) {
 		case SearchColumn::KEYWORD_ID: {
-			auto data_ptr = FlatVector::GetData<uint32_t>(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<uint32_t>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				data_ptr[i] = keywords[i].keyword_id;
 			}
 			break;
 		}
 		case SearchColumn::SHOP_ID: {
-			auto data_ptr = FlatVector::GetData<uint32_t>(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<uint32_t>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				data_ptr[i] = keywords[i].shop_id;
 			}
 			break;
 		}
 		case SearchColumn::DATE: {
-			auto *data_ptr = FlatVector::GetData<timestamp_t>(out_vec);
+			auto *data_ptr = FlatVector::GetDataMutable<timestamp_t>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				data_ptr[i] = timestamp_t(Timestamp::GetEpochSeconds(keywords[i].date));
 			}
 			break;
 		}
 		case SearchColumn::POSITION: {
-			auto data_ptr = FlatVector::GetData<uint8_t>(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<uint8_t>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				data_ptr[i] = keywords[i].position;
 			}
 			break;
 		}
 		case SearchColumn::PE_ID: {
-			auto data_ptr = FlatVector::GetData<uint64_t>(out_vec);
-			auto &validity = FlatVector::Validity(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<uint64_t>(out_vec);
+			auto &validity = FlatVector::ValidityMutable(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				if (keywords[i].pe_id) {
 					data_ptr[i] = *keywords[i].pe_id;
@@ -261,8 +262,8 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			break;
 		}
 		case SearchColumn::RETAILER_P_ID: {
-			auto *data_ptr = FlatVector::GetData<string_t>(out_vec);
-			auto &validity = FlatVector::Validity(out_vec);
+			auto *data_ptr = FlatVector::GetDataMutable<string_t>(out_vec);
+			auto &validity = FlatVector::ValidityMutable(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				if (keywords[i].retailer_p_id) {
 					data_ptr[i] = StringVector::AddString(out_vec, *keywords[i].retailer_p_id);
@@ -273,7 +274,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 			break;
 		}
 		case SearchColumn::IS_PAID: {
-			auto data_ptr = FlatVector::GetData<bool>(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<bool>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				data_ptr[i] = keywords[i].is_paid;
 			}
@@ -283,7 +284,7 @@ void SearchFunction(ClientContext &context, TableFunctionInput &data, DataChunk 
 	}
 
 	local_state.remainder_idx += count;
-	output.SetCardinality(count);
+	output.SetChildCardinality(count);
 }
 
 double SearchScanProgress(ClientContext &context, const FunctionData *bind_data,

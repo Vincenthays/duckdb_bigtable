@@ -5,7 +5,7 @@ deploy DUCKDB_VERSION:
     git checkout "tags/v{{DUCKDB_VERSION}}" || exit 1
     cd ..
 
-    VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make
+    VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make extension
     cat build/release/extension/bigtable2/bigtable2.duckdb_extension | gzip | gsutil cp - gs://di_duckdb_extension/v{{DUCKDB_VERSION}}/osx_arm64/bigtable2.duckdb_extension.gz
 
 [linux]
@@ -38,22 +38,25 @@ debug:
 release:
     VCPKG_TOOLCHAIN_PATH=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake GEN=ninja make
 
+duckdb_debug := "./build/debug/duckdb -unsigned --init /dev/null -c \"FORCE INSTALL bigtable2 FROM './build/debug/repository'; LOAD bigtable2\" -c"
+duckdb_release := "./build/release/duckdb -unsigned --init /dev/null -c \"FORCE INSTALL bigtable2 FROM './build/release/repository'; LOAD bigtable2\" -c"
+
 test: test_product test_search
     
 test_product: debug
-    ./build/debug/duckdb --init /dev/null -c "FROM product(2024_20, 2024_20, [1124000100000])"
-    ./build/debug/duckdb --init /dev/null -c "FROM product(2024_20, 2024_20, [1124000100000], [41188])"
+    {{duckdb_debug}} "FROM product(2024_20, 2024_20, [1124000100000])"
+    {{duckdb_debug}} "FROM product(2024_20, 2024_20, [1124000100000], [41188])"
 
 test_search: debug
-    ./build/debug/duckdb --init /dev/null -c "FROM search(2024_48, 2024_48, [130000]) ORDER BY keyword_id, shop_id, date, position"
-    ./build/debug/duckdb --init /dev/null -c "FROM search(2024_48, 2024_48, [130000], [131693, 131694]) ORDER BY keyword_id, shop_id, date, position"
+    {{duckdb_debug}} "FROM search(2024_48, 2024_48, [130000]) ORDER BY keyword_id, shop_id, date, position"
+    {{duckdb_debug}} "FROM search(2024_48, 2024_48, [130000], [131693, 131694]) ORDER BY keyword_id, shop_id, date, position"
 
 bench: release
-    ./build/release/duckdb --init /dev/null -c ".timer on" \
+    {{duckdb_release}} ".timer on" \
         -c "FROM product(2024_20, 2024_20, [1124000100000])" \
         -c "FROM search(2024_45, 2024_45, [98334])"
 
 test_filter_pushdown: debug
-    ./build/debug/duckdb --init /dev/null -c "SELECT pe_id, price FROM product(2024_20, 2024_20, [1124000100000])"
-    ./build/debug/duckdb --init /dev/null -c "FROM product(2024_20, 2024_20, [1124000100000])"
-    ./build/debug/duckdb --init /dev/null -c "SELECT pe_id FROM product(2024_20, 2024_20, [1124000100000])"
+    {{duckdb_debug}} "SELECT pe_id, price FROM product(2024_20, 2024_20, [1124000100000])"
+    {{duckdb_debug}} "FROM product(2024_20, 2024_20, [1124000100000])"
+    {{duckdb_debug}} "SELECT pe_id FROM product(2024_20, 2024_20, [1124000100000])"

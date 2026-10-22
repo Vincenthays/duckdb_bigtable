@@ -8,7 +8,7 @@ namespace cbt = ::google::cloud::bigtable;
 namespace duckdb {
 
 unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
-                                             vector<LogicalType> &return_types, vector<string> &names);
+                                             vector<LogicalType> &return_types, vector<Identifier> &names);
 
 unique_ptr<GlobalTableFunctionState> ProductInitGlobal(ClientContext &context, TableFunctionInitInput &input);
 

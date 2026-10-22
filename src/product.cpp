@@ -1,6 +1,7 @@
 #include "product.hpp"
 
 #include "duckdb.hpp"
+#include "duckdb/common/vector/list_vector.hpp"
 #include "utils.hpp"
 
 #include <google/cloud/bigtable/table.h>
@@ -51,7 +52,7 @@ struct ProductFunctionData : TableFunctionData {
 static cbt::Filter make_filter(const vector<column_t> &column_ids);
 
 unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFunctionBindInput &input,
-                                             vector<LogicalType> &return_types, vector<string> &names) {
+                                             vector<LogicalType> &return_types, vector<Identifier> &names) {
 	names = {"pe_id",    "shop_id",    "date",  "price",    "base_price", "unit_price",
 	         "promo_id", "promo_text", "shelf_id", "position", "is_paid"};
 
@@ -90,7 +91,7 @@ unique_ptr<FunctionData> ProductFunctionBind(ClientContext &context, TableFuncti
 		bind_data->ranges.reserve(prefix_ids.size() * ls_shop_id.size());
 
 		for (const auto &s : ls_shop_id) {
-			const auto shop_id = IntegerValue::Get(s);
+			const auto shop_id = BigIntValue::Get(s);
 			bind_data->shop_ids.emplace_back(shop_id);
 
 			for (const auto &p : prefix_ids) {
@@ -236,7 +237,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	const idx_t count = std::min((idx_t)STANDARD_VECTOR_SIZE, local_state.remainder.size() - local_state.remainder_idx);
 
 	if (count == 0) {
-		output.SetCardinality(0);
+		output.SetChildCardinality(0);
 		local_state.remainder_idx = 0;
 		local_state.remainder.clear();
 		return;
@@ -250,29 +251,29 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 
 		switch (static_cast<ProductColumn>(column_id)) {
 		case ProductColumn::PE_ID: {
-			auto data_ptr = FlatVector::GetData<uint64_t>(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<uint64_t>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				data_ptr[i] = products[i].pe_id;
 			}
 			break;
 		}
 		case ProductColumn::SHOP_ID: {
-			auto data_ptr = FlatVector::GetData<uint32_t>(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<uint32_t>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				data_ptr[i] = products[i].shop_id;
 			}
 			break;
 		}
 		case ProductColumn::DATE: {
-			auto data_ptr = FlatVector::GetData<date_t>(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<date_t>(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				data_ptr[i] = products[i].date;
 			}
 			break;
 		}
 		case ProductColumn::PRICE: {
-			auto data_ptr = FlatVector::GetData<float>(out_vec);
-			auto &validity = FlatVector::Validity(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<float>(out_vec);
+			auto &validity = FlatVector::ValidityMutable(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				if (products[i].price) {
 					data_ptr[i] = *products[i].price;
@@ -283,8 +284,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			break;
 		}
 		case ProductColumn::BASE_PRICE: {
-			auto data_ptr = FlatVector::GetData<float>(out_vec);
-			auto &validity = FlatVector::Validity(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<float>(out_vec);
+			auto &validity = FlatVector::ValidityMutable(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				if (products[i].base_price) {
 					data_ptr[i] = *products[i].base_price;
@@ -295,8 +296,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			break;
 		}
 		case ProductColumn::UNIT_PRICE: {
-			auto data_ptr = FlatVector::GetData<float>(out_vec);
-			auto &validity = FlatVector::Validity(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<float>(out_vec);
+			auto &validity = FlatVector::ValidityMutable(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				if (products[i].unit_price) {
 					data_ptr[i] = *products[i].unit_price;
@@ -307,8 +308,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			break;
 		}
 		case ProductColumn::PROMO_ID: {
-			auto data_ptr = FlatVector::GetData<uint32_t>(out_vec);
-			auto &validity = FlatVector::Validity(out_vec);
+			auto data_ptr = FlatVector::GetDataMutable<uint32_t>(out_vec);
+			auto &validity = FlatVector::ValidityMutable(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				if (products[i].promo_id) {
 					data_ptr[i] = *products[i].promo_id;
@@ -319,8 +320,8 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			break;
 		}
 		case ProductColumn::PROMO_TEXT: {
-			auto *data_ptr = FlatVector::GetData<string_t>(out_vec);
-			auto &validity = FlatVector::Validity(out_vec);
+			auto *data_ptr = FlatVector::GetDataMutable<string_t>(out_vec);
+			auto &validity = FlatVector::ValidityMutable(out_vec);
 			for (idx_t i = 0; i < count; i++) {
 				if (products[i].promo_text) {
 					data_ptr[i] = StringVector::AddString(out_vec, *products[i].promo_text);
@@ -331,12 +332,12 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			break;
 		}
 		case ProductColumn::SHELF_ID: {
-			auto *list_data = FlatVector::GetData<list_entry_t>(out_vec);
+			auto *list_data = FlatVector::GetDataMutable<list_entry_t>(out_vec);
 			idx_t total = 0;
 			for (idx_t i = 0; i < count; i++) total += products[i].shelf.size();
 			ListVector::Reserve(out_vec, total);
-			auto &child = ListVector::GetEntry(out_vec);
-			auto *child_data = FlatVector::GetData<string_t>(child);
+			auto &child = ListVector::GetChildMutable(out_vec);
+			auto *child_data = FlatVector::GetDataMutable<string_t>(child);
 			idx_t offset = 0;
 			for (idx_t i = 0; i < count; i++) {
 				list_data[i] = {offset, products[i].shelf.size()};
@@ -348,11 +349,11 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			break;
 		}
 		case ProductColumn::POSITION: {
-			auto *list_data = FlatVector::GetData<list_entry_t>(out_vec);
+			auto *list_data = FlatVector::GetDataMutable<list_entry_t>(out_vec);
 			idx_t total = 0;
 			for (idx_t i = 0; i < count; i++) total += products[i].position.size();
 			ListVector::Reserve(out_vec, total);
-			auto *child_data = FlatVector::GetData<uint16_t>(ListVector::GetEntry(out_vec));
+			auto *child_data = FlatVector::GetDataMutable<uint16_t>(ListVector::GetChildMutable(out_vec));
 			idx_t offset = 0;
 			for (idx_t i = 0; i < count; i++) {
 				list_data[i] = {offset, products[i].position.size()};
@@ -364,11 +365,11 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 			break;
 		}
 		case ProductColumn::IS_PAID: {
-			auto *list_data = FlatVector::GetData<list_entry_t>(out_vec);
+			auto *list_data = FlatVector::GetDataMutable<list_entry_t>(out_vec);
 			idx_t total = 0;
 			for (idx_t i = 0; i < count; i++) total += products[i].is_paid.size();
 			ListVector::Reserve(out_vec, total);
-			auto *child_data = FlatVector::GetData<bool>(ListVector::GetEntry(out_vec));
+			auto *child_data = FlatVector::GetDataMutable<bool>(ListVector::GetChildMutable(out_vec));
 			idx_t offset = 0;
 			for (idx_t i = 0; i < count; i++) {
 				list_data[i] = {offset, products[i].is_paid.size()};
@@ -383,7 +384,7 @@ void ProductFunction(ClientContext &context, TableFunctionInput &data, DataChunk
 	}
 
 	local_state.remainder_idx += count;
-	output.SetCardinality(count);
+	output.SetChildCardinality(count);
 }
 
 double ProductScanProgress(ClientContext &context, const FunctionData *bind_data,

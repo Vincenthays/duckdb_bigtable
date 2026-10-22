@@ -15,7 +15,7 @@ WORKDIR /app
 COPY vcpkg.json ./
 RUN vcpkg install
 COPY . ./
-RUN make
+RUN make extension
 
 FROM google/cloud-sdk:slim
 
