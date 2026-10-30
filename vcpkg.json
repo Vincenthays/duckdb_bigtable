@@ -1,11 +1,11 @@
 {
-  "version": "1.0.0",
   "name": "bigtable2",
-  "builtin-baseline": "7066011e27c97dbcfff739be2b69b592a41fc74a",
+  "version": "1.0.0",
+  "builtin-baseline": "9eec002df1cd109f8f104cd966a763daf9751489",
   "dependencies": [
     {
       "name": "google-cloud-cpp",
-      "version>=": "2.37.0#0",
+      "version>=": "2.37.0#1",
       "default-features": false,
       "features": [
         "bigtable"

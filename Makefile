@@ -1,16 +1,15 @@
-PROJ_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+VCPKG_ROOT ?= $(HOME)/vcpkg
+CMAKE_ARGS ?=
 
-# Configuration of extension
-EXT_NAME=bigtable2
-EXT_CONFIG=${PROJ_DIR}extension_config.cmake
+.PHONY: build install clean
 
-EXT_FLAGS=-DBUILD_SHELL=1
+build:
+	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_TOOLCHAIN_FILE=$(VCPKG_ROOT)/scripts/buildsystems/vcpkg.cmake $(CMAKE_ARGS)
+	cmake --build build
 
-# Include the Makefile from extension-ci-tools
-include extension-ci-tools/makefiles/duckdb_extension.Makefile
+install: build
+	duckdb -unsigned -c "FORCE INSTALL 'build/bigtable2.duckdb_extension'"
 
-# Build only the loadable extension (skips the DuckDB shell, unittest and other extensions)
-extension: ${EXTENSION_CONFIG_STEP}
-	mkdir -p build/release
-	cmake $(GENERATOR) $(BUILD_FLAGS) $(EXT_RELEASE_FLAGS) $(VCPKG_MANIFEST_FLAGS) -DCMAKE_BUILD_TYPE=Release -S $(DUCKDB_SRCDIR) -B build/release
-	cmake --build build/release --config Release --target bigtable2_loadable_extension
+clean:
+	rm -rf build

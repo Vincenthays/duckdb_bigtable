@@ -1,86 +1,39 @@
-# Bigtable2
+# bigtable2 (DuckDB C API v2 extension)
 
-This repository is based on https://github.com/duckdb/extension-template, check it out if you want to build and ship your own DuckDB extension.
+The `product` and `search` table functions from `bigtable2-duckdb`, rebuilt on DuckDB 2.0's C API v2
+(through the C++ wrapper `duckdb_cpp.hpp`, vendored in `third_party/duckdb`). It is built standalone and does
+not need the DuckDB source tree.
 
----
+The C API v2 is still unstable, so the extension is pinned to DuckDB **v2.0.0** (`-DDUCKDB_VERSION=...` to change).
 
-This extension, Bigtable2, allow you to ... <extension_goal>.
+## Build & install
 
-
-## Building
-### Managing dependencies
-DuckDB extensions uses VCPKG for dependency management. Enabling VCPKG is very simple: follow the [installation instructions](https://vcpkg.io/en/getting-started) or just run the following:
-```shell
-git clone https://github.com/Microsoft/vcpkg.git
-./vcpkg/bootstrap-vcpkg.sh
-export VCPKG_TOOLCHAIN_PATH=`pwd`/vcpkg/scripts/buildsystems/vcpkg.cmake
-```
-Note: VCPKG is only required for extensions that want to rely on it for dependency management. If you want to develop an extension without dependencies, or want to do your own dependency management, just skip this step. Note that the example extension uses VCPKG to build with a dependency for instructive purposes, so when skipping this step the build may not work without removing the dependency.
-
-### Build steps
-Now to build the extension, run:
 ```sh
-make
-```
-The main binaries that will be built are:
-```sh
-./build/release/duckdb
-./build/release/test/unittest
-./build/release/extension/bigtable2/bigtable2.duckdb_extension
-```
-- `duckdb` is the binary for the duckdb shell with the extension code automatically loaded.
-- `unittest` is the test runner of duckdb. Again, the extension is already linked into the binary.
-- `bigtable2.duckdb_extension` is the loadable binary as it would be distributed.
-
-## Running the extension
-To run the extension code, simply start the shell with `./build/release/duckdb`.
-
-Now we can use the features from the extension directly in DuckDB. The template contains a single scalar function `bigtable2()` that takes a string arguments and returns a string:
-```
-D select bigtable2('Jane') as result;
-┌───────────────┐
-│    result     │
-│    varchar    │
-├───────────────┤
-│ Bigtable2 Jane 🐥 │
-└───────────────┘
+make install          # builds build/bigtable2.duckdb_extension and installs it into ~/.duckdb/extensions
 ```
 
-## Running the tests
-Different tests can be created for DuckDB extensions. The primary way of testing DuckDB extensions should be the SQL tests in `./test/sql`. These SQL tests can be run using:
-```sh
-make test
-```
+Dependencies come from vcpkg in manifest mode (`vcpkg.json`, `VCPKG_ROOT` defaults to `~/vcpkg`, at release 2026.10.16):
+google-cloud-cpp 2.37.0#1, gRPC 1.81.1, protobuf 6.33.4, abseil 20260107.1. fast_float 8.3.2 is vendored.
+Built as C++26.
 
-### Installing the deployed binaries
-To install your extension binaries from S3, you will need to do two things. Firstly, DuckDB should be launched with the
-`allow_unsigned_extensions` option set to true. How to set this will depend on the client you're using. Some examples:
+## Use
 
-CLI:
-```shell
-duckdb -unsigned
-```
+The extension is unsigned, so start DuckDB with `-unsigned` (or `SET allow_unsigned_extensions = true`):
 
-Python:
-```python
-con = duckdb.connect(':memory:', config={'allow_unsigned_extensions' : 'true'})
-```
-
-NodeJS:
-```js
-db = new duckdb.Database(':memory:', {"allow_unsigned_extensions": "true"});
-```
-
-Secondly, you will need to set the repository endpoint in DuckDB to the HTTP url of your bucket + version of the extension
-you want to install. To do this run the following SQL query in DuckDB:
 ```sql
-SET custom_extension_repository='bucket.s3.eu-west-1.amazonaws.com/<your_extension_name>/latest';
+LOAD bigtable2;
+SELECT * FROM product(202601, 202601, [1250000644300]);           -- optional 4th arg: shop_ids BIGINT[]
+SELECT * FROM search(202601, 202604, [1, 2, 3], [115914]);
 ```
-Note that the `/latest` path will allow you to install the latest extension version available for your current version of
-DuckDB. To specify a specific version, you can pass the version instead.
 
-After running these steps, you can install and load your extension using the regular INSTALL/LOAD commands in DuckDB:
-```sql
-INSTALL bigtable2
-LOAD bigtable2
-```
+## Just recipes
+
+| Recipe | What it does |
+|---|---|
+| `just install [2.0.0]` | Build for this machine and install into local DuckDB |
+| `just test` / `just bench` | Run sample queries / timings |
+| `just duckdb-headers 2.0.0` | Re-vendor the C API v2 headers for a DuckDB release |
+| `just deploy 2.0.0` | macOS: build + upload `osx_arm64`. Linux: build `linux_amd64` and `linux_amd64_musl` in Docker + upload |
+| `just build-linux` | Build both Linux variants via Docker into `dist/` (works on macOS through emulation) |
+
+Artifacts go to `gs://di_duckdb_extension/v<version>/<platform>/bigtable2.duckdb_extension.gz`.

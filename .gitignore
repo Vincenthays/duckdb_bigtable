@@ -1,13 +1,17 @@
-build
-.idea
-cmake-build-debug
-duckdb_unittest_tempdir/
+# Build output (CMake, Ninja, vcpkg manifest installs)
+build/
+cmake-build-*/
+vcpkg_installed/
+*.duckdb_extension
+*.duckdb_extension.raw
+
+# Editors / OS
+.vscode/
+.idea/
+.cache/
 .DS_Store
-testext
-test/python/__pycache__/
-.Rhistory
-.vscode
-vcpkg_installed
-CMake*
-*.log
-.cache
+
+# Local DuckDB files
+*.duckdb
+*.duckdb.wal
+dist/

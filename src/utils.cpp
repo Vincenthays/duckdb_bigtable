@@ -1,5 +1,5 @@
 #include "utils.hpp"
-#include "fast_float/fast_float.h"
+#include "fast_float.h"
 
 #include <cstdint>
 #include <optional>
@@ -44,7 +44,7 @@ std::optional<uint64_t> ParseUint64(std::string_view s) {
 
 std::optional<float> ParseFloat(std::string_view s) {
 	float result;
-	auto [ptr, ec] = duckdb_fast_float::from_chars(s.data(), s.data() + s.size(), result);
+	auto [ptr, ec] = fast_float::from_chars(s.data(), s.data() + s.size(), result);
 	if (ec == std::errc()) {
 		return result;
 	}

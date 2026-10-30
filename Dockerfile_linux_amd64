@@ -1,24 +1,22 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ENV TZ=Etc/UTC
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update && apt install -y ca-certificates build-essential cmake git curl zip unzip tar pkg-config ninja-build
+RUN apt-get update && apt-get install -y ca-certificates build-essential g++-14 cmake git curl zip unzip tar pkg-config ninja-build python3
+ENV CC=gcc-14 CXX=g++-14
 
+ARG VCPKG_TAG=2026.10.16
 WORKDIR /opt
-RUN git clone https://github.com/Microsoft/vcpkg.git
-RUN ./vcpkg/bootstrap-vcpkg.sh
-ENV PATH=$PATH:/opt/vcpkg
-ENV VCPKG_TOOLCHAIN_PATH=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
-ENV GEN=ninja
+RUN git clone --depth 1 --branch ${VCPKG_TAG} https://github.com/microsoft/vcpkg.git && ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+ENV VCPKG_ROOT=/opt/vcpkg
 
 WORKDIR /app
 COPY vcpkg.json ./
-RUN vcpkg install
+RUN /opt/vcpkg/vcpkg install --x-install-root=/app/build/vcpkg_installed
 COPY . ./
-RUN make extension
+RUN make build CMAKE_ARGS="-DDUCKDB_PLATFORM=linux_amd64 -DVCPKG_INSTALLED_DIR=/app/build/vcpkg_installed"
 
 FROM google/cloud-sdk:slim
-
 WORKDIR /app
-COPY --from=0 /app/build/release/extension/bigtable2/bigtable2.duckdb_extension .
+COPY --from=0 /app/build/bigtable2.duckdb_extension .
 RUN gzip bigtable2.duckdb_extension

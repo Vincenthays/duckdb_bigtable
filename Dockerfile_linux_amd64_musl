@@ -1,24 +1,20 @@
 FROM alpine:3
 
-RUN apk add -qq ccache cmake git ninja ninja-build clang20 gcc libssl3 wget bash zip gettext unzip build-base curl make libffi-dev zlib openssh autoconf linux-headers libunwind-dev
-
-WORKDIR /opt
-RUN git clone https://github.com/Microsoft/vcpkg.git
-RUN VCPKG_FORCE_SYSTEM_BINARIES=1 ./vcpkg/bootstrap-vcpkg.sh
-ENV PATH=$PATH:/opt/vcpkg
-ENV VCPKG_TOOLCHAIN_PATH=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
+RUN apk add -qq cmake git ninja-build build-base g++ bash zip unzip curl tar make pkgconf linux-headers perl python3
 ENV VCPKG_FORCE_SYSTEM_BINARIES=1
-ENV GEN=ninja
-ENV DUCKDB_PLATFORM=linux_amd64_musl
+
+ARG VCPKG_TAG=2026.10.16
+WORKDIR /opt
+RUN git clone --depth 1 --branch ${VCPKG_TAG} https://github.com/microsoft/vcpkg.git && ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+ENV VCPKG_ROOT=/opt/vcpkg
 
 WORKDIR /app
 COPY vcpkg.json ./
-RUN vcpkg install
+RUN /opt/vcpkg/vcpkg install --x-install-root=/app/build/vcpkg_installed
 COPY . ./
-RUN make extension
+RUN make build CMAKE_ARGS="-DDUCKDB_PLATFORM=linux_amd64_musl -DVCPKG_INSTALLED_DIR=/app/build/vcpkg_installed"
 
 FROM google/cloud-sdk:slim
-
 WORKDIR /app
-COPY --from=0 /app/build/release/extension/bigtable2/bigtable2.duckdb_extension .
+COPY --from=0 /app/build/bigtable2.duckdb_extension .
 RUN gzip bigtable2.duckdb_extension
