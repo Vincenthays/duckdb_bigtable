@@ -30,7 +30,7 @@ deploy DUCKDB_VERSION: (duckdb-headers DUCKDB_VERSION)
         docker run -i -v /home/dataimpact/gs.json:/app/gs.json duckdb_extension_$platform bash <<EOS
             gcloud auth activate-service-account --key-file /app/gs.json
             gsutil cp bigtable2.duckdb_extension.gz {{bucket}}/v{{DUCKDB_VERSION}}/$platform/bigtable2.duckdb_extension.gz
-        EOS
+    EOS
     done
 
 # Build the Linux extensions locally (works on macOS too, through emulation) into dist/
