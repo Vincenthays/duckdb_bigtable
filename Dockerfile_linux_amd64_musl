@@ -1,6 +1,6 @@
 FROM alpine:3
 
-RUN apk add -qq cmake git ninja-build build-base g++ bash zip unzip curl tar make pkgconf linux-headers perl python3
+RUN apk add -qq cmake git ninja ninja-build build-base g++ bash zip unzip curl tar make pkgconf linux-headers perl python3
 ENV VCPKG_FORCE_SYSTEM_BINARIES=1
 
 ARG VCPKG_TAG=2026.10.16
