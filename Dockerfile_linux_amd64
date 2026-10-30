@@ -1,9 +1,8 @@
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ENV TZ=Etc/UTC
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y ca-certificates build-essential g++-14 cmake git curl zip unzip tar pkg-config ninja-build python3
-ENV CC=gcc-14 CXX=g++-14
+RUN apt-get update && apt-get install -y ca-certificates build-essential cmake git curl zip unzip tar pkg-config ninja-build python3
 
 ARG VCPKG_TAG=2026.10.16
 WORKDIR /opt
