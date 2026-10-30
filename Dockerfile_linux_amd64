@@ -1,8 +1,7 @@
-FROM ubuntu:26.04
+# Same base as DuckDB's own linux_amd64 builds: glibc 2.28 (runs on almost any distro), GCC 14 toolset for C++26
+FROM quay.io/pypa/manylinux_2_28_x86_64
 
-ENV TZ=Etc/UTC
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y ca-certificates build-essential cmake git curl zip unzip tar pkg-config ninja-build python3
+RUN dnf install -y -q zip perl-IPC-Cmd && pipx install ninja
 
 ARG VCPKG_TAG=2026.10.16
 WORKDIR /opt
